@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "227699159450",
+    "project_id": "study-planner-9d8c0",
+    "storage_bucket": "study-planner-9d8c0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227699159450:android:97c0b08e5590854ba1ca23",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_studyplanner"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "227699159450-aqgbu29vehbbdagtubdadtq2geggd054.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.flutter_application_studyplanner",
+            "certificate_hash": "f26b3df566cba60a75eb557343936cf5170adfe3"
+          }
+        },
+        {
+          "client_id": "227699159450-d98oul5ujdvuao49k0jqv7s2pmkfappi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5XHzb0axpoOXM9s4zxT1ECVyKP3W94bM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "227699159450-d98oul5ujdvuao49k0jqv7s2pmkfappi.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "227699159450-6nnu3giorchn88gm042kclgp3u010jlr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.flutterApplicationStudyplanner"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
