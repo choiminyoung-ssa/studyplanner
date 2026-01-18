@@ -92,6 +92,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withAlpha(16),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withAlpha(60),
+                      ),
+                    ),
+                    child: Column(
+                      children: const [
+                        Text(
+                          '체험용 익명 계정',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        SizedBox(height: 6),
+                        Text('이메일: sangsan'),
+                        Text('비밀번호: sangsan'),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 48),
 
                   // 이메일 입력
@@ -109,6 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return '이메일을 입력해주세요';
+                      }
+                      if (value.trim() == 'sangsan') {
+                        return null;
                       }
                       if (!value.contains('@')) {
                         return '유효한 이메일을 입력해주세요';

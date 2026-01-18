@@ -23,6 +23,7 @@ class MonthlyFormScreen extends StatefulWidget {
 }
 
 class _MonthlyFormScreenState extends State<MonthlyFormScreen> {
+  static const bool _enableSubtasks = false;
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _notesController;
@@ -174,6 +175,7 @@ class _MonthlyFormScreenState extends State<MonthlyFormScreen> {
       if (userId == null) return;
 
       try {
+        final completedAt = _isCompleted ? (widget.plan?.completedAt ?? DateTime.now()) : null;
         if (widget.plan == null) {
           // 새 계획 생성
           final newPlan = MonthlyPlan(
@@ -191,6 +193,7 @@ class _MonthlyFormScreenState extends State<MonthlyFormScreen> {
             tag: _tagController.text.trim(),
             priority: _priority,
             isCompleted: _isCompleted,
+            completedAt: completedAt,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
@@ -211,6 +214,7 @@ class _MonthlyFormScreenState extends State<MonthlyFormScreen> {
               'tag': _tagController.text.trim(),
               'priority': _priority,
               'isCompleted': _isCompleted,
+              'completedAt': completedAt,
             },
           );
         }
@@ -430,242 +434,241 @@ class _MonthlyFormScreenState extends State<MonthlyFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // 월간 세부 목표
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.checklist, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              '월간 세부 목표',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                            ),
-                            if (_subtasks.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Chip(
-                                label: Text(
-                                  Subtask.getCompletionText(_subtasks),
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                padding: EdgeInsets.zero,
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ],
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle),
-                          onPressed: _addSubtask,
-                          tooltip: '월간 세부 목표 추가',
-                        ),
-                      ],
-                    ),
-                    if (_subtasks.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          '이번 달 목표를 세부로 나눠보세요 (선택사항)',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      )
-                    else
-                      ReorderableListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        onReorder: _reorderSubtasks,
-                        itemCount: _subtasks.length,
-                        itemBuilder: (context, index) {
-                          final subtask = _subtasks[index];
-                          _ensureSubtaskControllers(subtask);
-                          final titleController = _subtaskTitleControllers[subtask.id]!;
-                          final pageRangeController = _subtaskPageRangeControllers[subtask.id]!;
-                          final completedPageController = _subtaskCompletedPageControllers[subtask.id]!;
-                          final minutesController = _subtaskMinutesControllers[subtask.id]!;
-                          return Card(
-                            key: ValueKey(subtask.id),
-                            margin: const EdgeInsets.only(top: 8),
-                            child: ExpansionTile(
-                              leading: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ReorderableDragStartListener(
-                                    index: index,
-                                    child: const Icon(Icons.drag_handle),
-                                  ),
-                                  Checkbox(
-                                    value: subtask.isCompleted,
-                                    onChanged: (_) => _toggleSubtaskComplete(index),
-                                  ),
-                                ],
-                              ),
-                              title: Text(
-                                subtask.title.isEmpty ? '제목 없음' : subtask.title,
-                                style: TextStyle(
-                                  decoration: subtask.isCompleted
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                ),
-                              ),
-                              subtitle: (subtask.pageRange != null || subtask.estimatedMinutes > 0)
-                                  ? Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        if (subtask.pageRange != null) ...[
-                                          Row(
-                                            children: [
-                                              Icon(Icons.auto_stories, size: 14, color: Colors.grey[600]),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                subtask.getPageProgressText(),
-                                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                              ),
-                                            ],
-                                          ),
-                                          if (subtask.completedPage != null) ...[
-                                            const SizedBox(height: 4),
-                                            LinearProgressIndicator(
-                                              value: subtask.getPageProgress() / 100,
-                                              minHeight: 3,
-                                              backgroundColor: Colors.grey[300],
-                                              valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-                                            ),
-                                            const SizedBox(height: 4),
-                                          ],
-                                        ],
-                                        if (subtask.estimatedMinutes > 0)
-                                          Row(
-                                            children: [
-                                              Icon(Icons.timer_outlined, size: 14, color: Colors.grey[600]),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '예상: ${subtask.estimatedMinutes}분',
-                                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                              ),
-                                            ],
-                                          ),
-                                      ],
-                                    )
-                                  : null,
-                              trailing: IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _removeSubtask(index),
-                              ),
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    children: [
-                                      TextField(
-                                        decoration: const InputDecoration(
-                                          labelText: '제목',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        controller: titleController,
-                                        onChanged: (value) {
-                                          _updateSubtask(
-                                            index,
-                                            subtask.copyWith(title: value),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextField(
-                                        decoration: const InputDecoration(
-                                          labelText: '페이지 범위 (선택사항)',
-                                          border: OutlineInputBorder(),
-                                          hintText: '예: 45-67',
-                                          prefixIcon: Icon(Icons.auto_stories),
-                                        ),
-                                        controller: pageRangeController,
-                                        onChanged: (value) {
-                                          _updateSubtask(
-                                            index,
-                                            subtask.copyWith(
-                                              pageRange: value.trim().isEmpty ? null : value.trim(),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextField(
-                                        decoration: const InputDecoration(
-                                          labelText: '완료 페이지 (선택사항)',
-                                          border: OutlineInputBorder(),
-                                          hintText: '예: 52',
-                                          prefixIcon: Icon(Icons.bookmark),
-                                        ),
-                                        controller: completedPageController,
-                                        keyboardType: TextInputType.number,
-                                        onChanged: (value) {
-                                          final page = int.tryParse(value);
-                                          _updateSubtask(
-                                            index,
-                                            subtask.copyWith(completedPage: page),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
-                                      TextField(
-                                        decoration: const InputDecoration(
-                                          labelText: '예상 시간 (분)',
-                                          border: OutlineInputBorder(),
-                                          suffixText: '분',
-                                        ),
-                                        keyboardType: TextInputType.number,
-                                        controller: minutesController,
-                                        onChanged: (value) {
-                                          final minutes = int.tryParse(value) ?? 0;
-                                          _updateSubtask(
-                                            index,
-                                            subtask.copyWith(estimatedMinutes: minutes),
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    if (_subtasks.isNotEmpty) ...[
-                      const SizedBox(height: 12),
+            if (_enableSubtasks) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '총 예상 시간: ${Subtask.getTotalEstimatedMinutes(_subtasks)}분',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              const Icon(Icons.checklist, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                '월간 세부 목표',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
+                              if (_subtasks.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Chip(
+                                  label: Text(
+                                    Subtask.getCompletionText(_subtasks),
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ],
+                            ],
                           ),
-                          Text(
-                            '완료율: ${Subtask.getCompletionPercentage(_subtasks).toStringAsFixed(0)}%',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle),
+                            onPressed: _addSubtask,
+                            tooltip: '월간 세부 목표 추가',
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: _subtasks.isEmpty
-                            ? 0
-                            : Subtask.getCompletionPercentage(_subtasks) / 100,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      if (_subtasks.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            '이번 달 목표를 세부로 나눠보세요 (선택사항)',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        )
+                      else
+                        ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          onReorder: _reorderSubtasks,
+                          itemCount: _subtasks.length,
+                          itemBuilder: (context, index) {
+                            final subtask = _subtasks[index];
+                            _ensureSubtaskControllers(subtask);
+                            final titleController = _subtaskTitleControllers[subtask.id]!;
+                            final pageRangeController = _subtaskPageRangeControllers[subtask.id]!;
+                            final completedPageController = _subtaskCompletedPageControllers[subtask.id]!;
+                            final minutesController = _subtaskMinutesControllers[subtask.id]!;
+                            return Card(
+                              key: ValueKey(subtask.id),
+                              margin: const EdgeInsets.only(top: 8),
+                              child: ExpansionTile(
+                                leading: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ReorderableDragStartListener(
+                                      index: index,
+                                      child: const Icon(Icons.drag_handle),
+                                    ),
+                                    Checkbox(
+                                      value: subtask.isCompleted,
+                                      onChanged: (_) => _toggleSubtaskComplete(index),
+                                    ),
+                                  ],
+                                ),
+                                title: Text(
+                                  subtask.title.isEmpty ? '제목 없음' : subtask.title,
+                                  style: TextStyle(
+                                    decoration: subtask.isCompleted ? TextDecoration.lineThrough : null,
+                                  ),
+                                ),
+                                subtitle: (subtask.pageRange != null || subtask.estimatedMinutes > 0)
+                                    ? Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (subtask.pageRange != null) ...[
+                                            Row(
+                                              children: [
+                                                Icon(Icons.auto_stories, size: 14, color: Colors.grey[600]),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  subtask.getPageProgressText(),
+                                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                                ),
+                                              ],
+                                            ),
+                                            if (subtask.completedPage != null) ...[
+                                              const SizedBox(height: 4),
+                                              LinearProgressIndicator(
+                                                value: subtask.getPageProgress() / 100,
+                                                minHeight: 3,
+                                                backgroundColor: Colors.grey[300],
+                                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                                              ),
+                                              const SizedBox(height: 4),
+                                            ],
+                                          ],
+                                          if (subtask.estimatedMinutes > 0)
+                                            Row(
+                                              children: [
+                                                Icon(Icons.timer_outlined, size: 14, color: Colors.grey[600]),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '예상: ${subtask.estimatedMinutes}분',
+                                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                                ),
+                                              ],
+                                            ),
+                                        ],
+                                      )
+                                    : null,
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _removeSubtask(index),
+                                ),
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      children: [
+                                        TextField(
+                                          decoration: const InputDecoration(
+                                            labelText: '제목',
+                                            border: OutlineInputBorder(),
+                                          ),
+                                          controller: titleController,
+                                          onChanged: (value) {
+                                            _updateSubtask(
+                                              index,
+                                              subtask.copyWith(title: value),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextField(
+                                          decoration: const InputDecoration(
+                                            labelText: '페이지 범위 (선택사항)',
+                                            border: OutlineInputBorder(),
+                                            hintText: '예: 45-67',
+                                            prefixIcon: Icon(Icons.auto_stories),
+                                          ),
+                                          controller: pageRangeController,
+                                          onChanged: (value) {
+                                            _updateSubtask(
+                                              index,
+                                              subtask.copyWith(
+                                                pageRange: value.trim().isEmpty ? null : value.trim(),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextField(
+                                          decoration: const InputDecoration(
+                                            labelText: '완료 페이지 (선택사항)',
+                                            border: OutlineInputBorder(),
+                                            hintText: '예: 52',
+                                            prefixIcon: Icon(Icons.bookmark),
+                                          ),
+                                          controller: completedPageController,
+                                          keyboardType: TextInputType.number,
+                                          onChanged: (value) {
+                                            final page = int.tryParse(value);
+                                            _updateSubtask(
+                                              index,
+                                              subtask.copyWith(completedPage: page),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        TextField(
+                                          decoration: const InputDecoration(
+                                            labelText: '예상 시간 (분)',
+                                            border: OutlineInputBorder(),
+                                            suffixText: '분',
+                                          ),
+                                          keyboardType: TextInputType.number,
+                                          controller: minutesController,
+                                          onChanged: (value) {
+                                            final minutes = int.tryParse(value) ?? 0;
+                                            _updateSubtask(
+                                              index,
+                                              subtask.copyWith(estimatedMinutes: minutes),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      if (_subtasks.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '총 예상 시간: ${Subtask.getTotalEstimatedMinutes(_subtasks)}분',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '완료율: ${Subtask.getCompletionPercentage(_subtasks).toStringAsFixed(0)}%',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: _subtasks.isEmpty
+                              ? 0
+                              : Subtask.getCompletionPercentage(_subtasks) / 100,
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             // 우선순위
             Card(

@@ -7,10 +7,12 @@ class AuthProvider with ChangeNotifier {
 
   User? _user;
   bool _isLoading = false;
+  bool _isInitialized = false;
   String? _errorMessage;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _user != null;
   String? get userId => _user?.uid;
@@ -19,6 +21,7 @@ class AuthProvider with ChangeNotifier {
     // 인증 상태 변경 리스너
     _authService.authStateChanges.listen((User? user) {
       _user = user;
+      _isInitialized = true;
       notifyListeners();
     });
   }
@@ -49,7 +52,11 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.signIn(email: email, password: password);
+      if (_authService.isDemoCredentials(email, password)) {
+        await _authService.signInDemo();
+      } else {
+        await _authService.signIn(email: email, password: password);
+      }
       _isLoading = false;
       notifyListeners();
       return true;

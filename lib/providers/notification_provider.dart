@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/daily_plan.dart';
 import '../models/notification_settings.dart';
 import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
+import '../models/notification_log.dart';
 
 class NotificationProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -20,6 +21,10 @@ class NotificationProvider with ChangeNotifier {
 
   Future<void> initialize() async {
     if (_initialized) return;
+    if (kIsWeb) {
+      _initialized = true;
+      return;
+    }
     await _notificationService.initialize();
     _initialized = true;
   }
@@ -87,7 +92,17 @@ class NotificationProvider with ChangeNotifier {
     await _notificationService.cancelPlanReminder(planId);
   }
 
-  Future<void> showTestNotification() async {
+  Future<void> showTestNotification(String userId) async {
     await _notificationService.showTestNotification();
+    await _firestoreService.addNotificationLog(
+      NotificationLog(
+        id: '',
+        userId: userId,
+        type: 'test',
+        title: '테스트 알림',
+        body: '알림 테스트가 실행되었습니다.',
+        createdAt: DateTime.now(),
+      ),
+    );
   }
 }

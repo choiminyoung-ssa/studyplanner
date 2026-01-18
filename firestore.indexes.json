@@ -36,6 +36,36 @@
       ]
     },
     {
+      "collectionGroup": "study_goals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "period", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "specificDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "study_goals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "period", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "weekId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "study_goals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "period", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "month", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "subjects",
       "queryScope": "COLLECTION",
       "fields": [
@@ -50,6 +80,24 @@
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "displayOrder", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "monthly_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "syncWithGoogleCalendar", "order": "ASCENDING" },
+        { "fieldPath": "lastSyncedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "weekly_plans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "syncWithGoogleCalendar", "order": "ASCENDING" },
+        { "fieldPath": "lastSyncedAt", "order": "DESCENDING" }
       ]
     }
   ],

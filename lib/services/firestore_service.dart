@@ -8,6 +8,10 @@ import '../models/search_result.dart';
 import '../models/study_session.dart';
 import '../models/study_goal.dart';
 import '../models/notification_settings.dart';
+import '../models/notification_log.dart';
+import '../models/weekly_timetable_entry.dart';
+import '../models/backlog_task.dart';
+import '../models/study_resource.dart';
 
 class FirestoreIndexException implements Exception {
   final String message;
@@ -33,6 +37,17 @@ class FirestoreService {
     return null;
   }
 
+  FirestoreIndexException? _maybeIndexException(Object error) {
+    final raw = error.toString();
+    final url = _extractIndexUrl(raw);
+    if (url == null) return null;
+    final isBuilding = raw.contains('building') || raw.contains('생성 중') || raw.contains('빌드');
+    final message = isBuilding
+        ? '인덱스가 생성 중입니다. 잠시 후 다시 시도하세요.'
+        : '쿼리에 필요한 Firestore 인덱스가 설정되어 있지 않거나 권한이 없습니다.';
+    return FirestoreIndexException(message, url);
+  }
+
   // helper: transform stream to map + friendly error handling
   Stream<List<T>> _snapshotStreamToList<T>(Query<Map<String, dynamic>> query, T Function(DocumentSnapshot<Map<String, dynamic>> doc) mapper) {
     return query.snapshots().transform(
@@ -45,13 +60,14 @@ class FirestoreService {
           }
         },
         handleError: (error, stackTrace, sink) {
-          final raw = error.toString();
-          final url = _extractIndexUrl(raw);
-          final isBuilding = raw.contains('building') || raw.contains('생성 중') || raw.contains('빌드');
-          final message = isBuilding
-              ? '인덱스가 생성 중입니다. 잠시 후 다시 시도하세요.'
-              : '쿼리에 필요한 Firestore 인덱스가 설정되어 있지 않거나 권한이 없습니다.';
-          sink.addError(FirestoreIndexException(message, url));
+          final indexException = _maybeIndexException(error);
+          if (indexException != null) {
+            sink.addError(indexException);
+            return;
+          }
+          sink.addError(
+            FirestoreIndexException('쿼리에 필요한 Firestore 인덱스가 설정되어 있지 않거나 권한이 없습니다.'),
+          );
         },
 
       ),
@@ -79,23 +95,64 @@ class FirestoreService {
 
   // 월간 계획 조회 (특정 월)
   Stream<List<MonthlyPlan>> getMonthlyPlans(String userId, String month) {
-    return _db
-        .collection('monthly_plans')
-        .where('userId', isEqualTo: userId)
-        .where('month', isEqualTo: month)
-        .snapshots()
-        .map((snapshot) {
-          final plans = snapshot.docs.map((doc) => MonthlyPlan.fromFirestore(doc)).toList();
-          // 클라이언트에서 정렬 (생성일 기준 내림차순)
-          plans.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return plans;
-        });
+    final monthStart = _parseMonthStart(month);
+    final monthEnd = monthStart != null ? DateTime(monthStart.year, monthStart.month + 1, 0) : null;
+
+    return getAllMonthlyPlans(userId).map((plans) {
+      final filtered = plans.where((plan) {
+        if (monthStart == null || monthEnd == null) {
+          return plan.month == month;
+        }
+
+        final range = _getMonthlyPlanRange(plan);
+        if (range == null) {
+          return plan.month == month;
+        }
+
+        final start = _normalizeDate(range.start);
+        final end = _normalizeDate(range.end);
+
+        if (end.isBefore(monthStart)) return false;
+        if (start.isAfter(monthEnd)) return false;
+        return true;
+      }).toList();
+
+      filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return filtered;
+    });
   }
 
   // 월간 계획 조회 (모든 월)
   Stream<List<MonthlyPlan>> getAllMonthlyPlans(String userId) {
     final q = _db.collection('monthly_plans').where('userId', isEqualTo: userId).orderBy('month', descending: true);
     return _snapshotStreamToList<MonthlyPlan>(q, (doc) => MonthlyPlan.fromFirestore(doc));
+  }
+
+  DateTime? _parseMonthStart(String month) {
+    final parts = month.split('-');
+    if (parts.length != 2) return null;
+    final year = int.tryParse(parts[0]);
+    final monthValue = int.tryParse(parts[1]);
+    if (year == null || monthValue == null) return null;
+    return DateTime(year, monthValue, 1);
+  }
+
+  DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  _PlanRange? _getMonthlyPlanRange(MonthlyPlan plan) {
+    if (plan.startDate == null && plan.endDate == null) {
+      return null;
+    }
+
+    final start = plan.startDate ?? plan.endDate!;
+    final end = plan.endDate ?? plan.startDate!;
+
+    if (start.isAfter(end)) {
+      return _PlanRange(end, start);
+    }
+    return _PlanRange(start, end);
   }
 
   // 월간 계획 수정
@@ -363,18 +420,24 @@ class FirestoreService {
 
   // 일간 계획 조회 (기간)
   Future<List<DailyPlan>> getDailyPlansByDateRange(String userId, DateTime start, DateTime end) async {
-    final startOfDay = DateTime(start.year, start.month, start.day, 0, 0, 0);
-    final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
-    final q = _db
-        .collection('daily_plans')
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-        .orderBy('date')
-        .orderBy('startTime');
+    try {
+      final startOfDay = DateTime(start.year, start.month, start.day, 0, 0, 0);
+      final endOfDay = DateTime(end.year, end.month, end.day, 23, 59, 59);
+      final q = _db
+          .collection('daily_plans')
+          .where('userId', isEqualTo: userId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .orderBy('date')
+          .orderBy('startTime');
 
-    final snapshot = await q.get();
-    return snapshot.docs.map((doc) => DailyPlan.fromFirestore(doc)).toList();
+      final snapshot = await q.get();
+      return snapshot.docs.map((doc) => DailyPlan.fromFirestore(doc)).toList();
+    } catch (e) {
+      final indexException = _maybeIndexException(e);
+      if (indexException != null) throw indexException;
+      throw Exception('일간 계획 조회 실패: $e');
+    }
   }
 
   // 일간 계획 수정
@@ -531,45 +594,63 @@ class FirestoreService {
   }
 
   Future<StudyGoal?> getDailyGoal(String userId, DateTime date) async {
-    final start = DateTime(date.year, date.month, date.day, 0, 0, 0);
-    final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
-    final snapshot = await _db
-        .collection('study_goals')
-        .where('userId', isEqualTo: userId)
-        .where('period', isEqualTo: GoalPeriod.daily.name)
-        .where('specificDate', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('specificDate', isLessThanOrEqualTo: Timestamp.fromDate(end))
-        .where('isActive', isEqualTo: true)
-        .get();
+    try {
+      final start = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
+      final snapshot = await _db
+          .collection('study_goals')
+          .where('userId', isEqualTo: userId)
+          .where('period', isEqualTo: GoalPeriod.daily.name)
+          .where('specificDate', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('specificDate', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .where('isActive', isEqualTo: true)
+          .get();
 
-    if (snapshot.docs.isEmpty) return null;
-    return _mapStudyGoal(snapshot.docs.first);
+      if (snapshot.docs.isEmpty) return null;
+      return _mapStudyGoal(snapshot.docs.first);
+    } catch (e) {
+      final indexException = _maybeIndexException(e);
+      if (indexException != null) throw indexException;
+      throw Exception('일간 목표 조회 실패: $e');
+    }
   }
 
   Future<StudyGoal?> getWeeklyGoal(String userId, String weekId) async {
-    final snapshot = await _db
-        .collection('study_goals')
-        .where('userId', isEqualTo: userId)
-        .where('period', isEqualTo: GoalPeriod.weekly.name)
-        .where('weekId', isEqualTo: weekId)
-        .where('isActive', isEqualTo: true)
-        .get();
+    try {
+      final snapshot = await _db
+          .collection('study_goals')
+          .where('userId', isEqualTo: userId)
+          .where('period', isEqualTo: GoalPeriod.weekly.name)
+          .where('weekId', isEqualTo: weekId)
+          .where('isActive', isEqualTo: true)
+          .get();
 
-    if (snapshot.docs.isEmpty) return null;
-    return _mapStudyGoal(snapshot.docs.first);
+      if (snapshot.docs.isEmpty) return null;
+      return _mapStudyGoal(snapshot.docs.first);
+    } catch (e) {
+      final indexException = _maybeIndexException(e);
+      if (indexException != null) throw indexException;
+      throw Exception('주간 목표 조회 실패: $e');
+    }
   }
 
   Future<StudyGoal?> getMonthlyGoal(String userId, String month) async {
-    final snapshot = await _db
-        .collection('study_goals')
-        .where('userId', isEqualTo: userId)
-        .where('period', isEqualTo: GoalPeriod.monthly.name)
-        .where('month', isEqualTo: month)
-        .where('isActive', isEqualTo: true)
-        .get();
+    try {
+      final snapshot = await _db
+          .collection('study_goals')
+          .where('userId', isEqualTo: userId)
+          .where('period', isEqualTo: GoalPeriod.monthly.name)
+          .where('month', isEqualTo: month)
+          .where('isActive', isEqualTo: true)
+          .get();
 
-    if (snapshot.docs.isEmpty) return null;
-    return _mapStudyGoal(snapshot.docs.first);
+      if (snapshot.docs.isEmpty) return null;
+      return _mapStudyGoal(snapshot.docs.first);
+    } catch (e) {
+      final indexException = _maybeIndexException(e);
+      if (indexException != null) throw indexException;
+      throw Exception('월간 목표 조회 실패: $e');
+    }
   }
 
   StudyGoal _mapStudyGoal(DocumentSnapshot doc) {
@@ -648,6 +729,27 @@ class FirestoreService {
     }
   }
 
+  // 과목 복구
+  Future<void> restoreSubject(String id) async {
+    try {
+      await _db.collection('subjects').doc(id).update({
+        'isActive': true,
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      throw Exception('과목 복구 실패: $e');
+    }
+  }
+
+  // 과목 영구 삭제
+  Future<void> deleteSubjectForever(String id) async {
+    try {
+      await _db.collection('subjects').doc(id).delete();
+    } catch (e) {
+      throw Exception('과목 영구 삭제 실패: $e');
+    }
+  }
+
   // 과목 순서 변경 (배치 업데이트)
   Future<void> updateSubjectOrders(List<Subject> subjects) async {
     try {
@@ -677,4 +779,184 @@ class FirestoreService {
       throw Exception('과목 조회 실패: $e');
     }
   }
+
+  // ========== 주간 시간표 ==========
+
+  Stream<List<WeeklyTimetableEntry>> getWeeklyTimetable(String userId) {
+    final q = _db
+        .collection('users')
+        .doc(userId)
+        .collection('weekly_timetable')
+        .orderBy('weekday');
+
+    return _snapshotStreamToList<WeeklyTimetableEntry>(q, (doc) => WeeklyTimetableEntry.fromFirestore(doc));
+  }
+
+  Future<String> createWeeklyTimetableEntry(WeeklyTimetableEntry entry) async {
+    try {
+      final docRef = await _db
+          .collection('users')
+          .doc(entry.userId)
+          .collection('weekly_timetable')
+          .add(entry.toMap());
+      return docRef.id;
+    } catch (e) {
+      throw Exception('시간표 생성 실패: $e');
+    }
+  }
+
+  Future<void> updateWeeklyTimetableEntry(String userId, String entryId, Map<String, dynamic> updates) async {
+    try {
+      updates['updatedAt'] = Timestamp.now();
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('weekly_timetable')
+          .doc(entryId)
+          .update(updates);
+    } catch (e) {
+      throw Exception('시간표 수정 실패: $e');
+    }
+  }
+
+  Future<void> deleteWeeklyTimetableEntry(String userId, String entryId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('weekly_timetable')
+          .doc(entryId)
+          .delete();
+    } catch (e) {
+      throw Exception('시간표 삭제 실패: $e');
+    }
+  }
+
+  // ========== 할일 보관함 ==========
+
+  Stream<List<BacklogTask>> getBacklogTasks(String userId) {
+    final q = _db
+        .collection('users')
+        .doc(userId)
+        .collection('backlog_tasks')
+        .orderBy('updatedAt', descending: true);
+    return _snapshotStreamToList<BacklogTask>(q, (doc) => BacklogTask.fromFirestore(doc));
+  }
+
+  Future<String> createBacklogTask(BacklogTask task) async {
+    try {
+      final docRef = await _db
+          .collection('users')
+          .doc(task.userId)
+          .collection('backlog_tasks')
+          .add(task.toMap());
+      return docRef.id;
+    } catch (e) {
+      throw Exception('할일 생성 실패: $e');
+    }
+  }
+
+  Future<void> updateBacklogTask(String userId, String taskId, Map<String, dynamic> updates) async {
+    try {
+      updates['updatedAt'] = Timestamp.now();
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('backlog_tasks')
+          .doc(taskId)
+          .update(updates);
+    } catch (e) {
+      throw Exception('할일 수정 실패: $e');
+    }
+  }
+
+  Future<void> deleteBacklogTask(String userId, String taskId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('backlog_tasks')
+          .doc(taskId)
+          .delete();
+    } catch (e) {
+      throw Exception('할일 삭제 실패: $e');
+    }
+  }
+
+  // ========== 알림 로그 ==========
+
+  Future<void> addNotificationLog(NotificationLog log) async {
+    try {
+      await _db.collection('notification_logs').add(log.toFirestore());
+    } catch (e) {
+      throw Exception('알림 로그 저장 실패: $e');
+    }
+  }
+
+  Stream<List<NotificationLog>> getNotificationLogs(String userId, {int limit = 20}) {
+    final q = _db
+        .collection('notification_logs')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+    return _snapshotStreamToList<NotificationLog>(q, (doc) => NotificationLog.fromFirestore(doc));
+  }
+
+  // ========== 학습 자료(강의/문제집) ==========
+
+  Stream<List<StudyResource>> getStudyResources(String userId) {
+    final q = _db
+        .collection('users')
+        .doc(userId)
+        .collection('study_resources')
+        .orderBy('updatedAt', descending: true);
+    return _snapshotStreamToList<StudyResource>(q, (doc) => StudyResource.fromFirestore(doc));
+  }
+
+  Future<String> createStudyResource(StudyResource resource) async {
+    try {
+      final docRef = await _db
+          .collection('users')
+          .doc(resource.userId)
+          .collection('study_resources')
+          .add(resource.toFirestore());
+      return docRef.id;
+    } catch (e) {
+      throw Exception('학습 자료 생성 실패: $e');
+    }
+  }
+
+  Future<void> updateStudyResource(String userId, String resourceId, Map<String, dynamic> updates) async {
+    try {
+      updates['updatedAt'] = Timestamp.now();
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('study_resources')
+          .doc(resourceId)
+          .update(updates);
+    } catch (e) {
+      throw Exception('학습 자료 수정 실패: $e');
+    }
+  }
+
+  Future<void> deleteStudyResource(String userId, String resourceId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('study_resources')
+          .doc(resourceId)
+          .delete();
+    } catch (e) {
+      throw Exception('학습 자료 삭제 실패: $e');
+    }
+  }
+}
+
+class _PlanRange {
+  final DateTime start;
+  final DateTime end;
+
+  const _PlanRange(this.start, this.end);
 }

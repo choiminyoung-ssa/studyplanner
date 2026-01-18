@@ -40,5 +40,37 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(request.resource.data.userId);
       allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
     }
+
+    // Weekly Timetable (user scoped)
+    match /users/{userId}/weekly_timetable/{entryId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
+
+    // Backlog Tasks (user scoped)
+    match /users/{userId}/backlog_tasks/{taskId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
+
+    // Study Resources (user scoped)
+    match /users/{userId}/study_resources/{resourceId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
+
+    // Notification Logs
+    match /notification_logs/{logId} {
+      allow read: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
+    }
+
+    // Calendar Sync Settings (user scoped)
+    match /users/{userId}/calendar_sync_settings/{document} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
+
+    // Sync Log (user scoped)
+    match /users/{userId}/sync_log/{logId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
   }
 }

@@ -31,7 +31,7 @@ class GoalService {
     if (goal.subjectTargets != null) {
       subjectAchievement = {};
       goal.subjectTargets!.forEach((subjectId, target) {
-        final actual = stats.subjectMinutes[subjectId] ?? 0;
+        final actual = stats.subjectStats[subjectId]?.minutes ?? 0;
         subjectAchievement![subjectId] = (actual / target * 100).clamp(0.0, 200.0);
       });
     }

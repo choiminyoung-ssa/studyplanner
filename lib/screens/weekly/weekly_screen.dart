@@ -8,6 +8,7 @@ import '../../models/monthly_plan.dart';
 import '../../models/subject.dart';
 import '../../utils/date_utils.dart';
 import 'weekly_form_screen.dart';
+import '../../widgets/fade_sliver_header.dart';
 
 class WeeklyScreen extends StatefulWidget {
   const WeeklyScreen({super.key});
@@ -19,6 +20,7 @@ class WeeklyScreen extends StatefulWidget {
 class _WeeklyScreenState extends State<WeeklyScreen> {
   DateTime _selectedWeek = DateTime.now();
   final FirestoreService _firestoreService = FirestoreService();
+  static const double _minBoardWidth = 980;
 
   void _changeWeek(int weeks) {
     setState(() {
@@ -38,487 +40,594 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
     final weekEnd = DateHelper.getWeekEndDate(_selectedWeek);
     final weekDates = DateHelper.getWeekDates(_selectedWeek);
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      body: Column(
-        children: [
-          // 주 선택기
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
+      backgroundColor: colorScheme.surface,
+      body: SafeArea(
+        top: false,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            FadeSliverHeader(
+              maxHeight: 120,
+              child: _buildHeader(weekStart, weekEnd, colorScheme),
             ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed: () => _changeWeek(-1),
-                    ),
-                    Text(
-                      '${DateHelper.toMonthString(weekStart)} 주간',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed: () => _changeWeek(1),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${DateHelper.toDateString(weekStart)} ~ ${DateHelper.toDateString(weekEnd)}',
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
-              ],
+          ],
+          body: StreamBuilder<List<WeeklyPlan>>(
+            stream: _firestoreService.getWeeklyPlansByDateRange(
+              userId,
+              weekStart,
+              weekEnd,
             ),
-          ),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          // 1주 캘린더 (월~일)
-          Expanded(
-            child: StreamBuilder<List<WeeklyPlan>>(
-              stream: _firestoreService.getWeeklyPlansByDateRange(
-                userId,
-                weekStart,
-                weekEnd,
-              ),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+              if (snapshot.hasError) {
+                return _buildErrorState(snapshot.error);
+              }
 
-                if (snapshot.hasError) {
-                  final err = snapshot.error;
-                  if (err is FirestoreIndexException) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Card(
-                        color: Colors.red[50],
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('데이터 조회 오류', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-                              Text('이 쿼리를 실행하려면 Firestore에 복합 인덱스가 필요합니다.'),
-                              const SizedBox(height: 8),
-                              if (err.indexUrl != null) ...[
-                                SelectableText(err.indexUrl!),
-                                const SizedBox(height: 8),
-                                ElevatedButton.icon(
-                                  onPressed: () => launchUrlString(err.indexUrl!),
-                                  icon: const Icon(Icons.open_in_new),
-                                  label: const Text('인덱스 생성 페이지 열기'),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
+              final allPlans = snapshot.data ?? [];
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < _minBoardWidth;
+                  if (isCompact) {
+                    return _buildCompactWeekList(
+                      weekStart: weekStart,
+                      weekEnd: weekEnd,
+                      weekDates: weekDates,
+                      allPlans: allPlans,
                     );
                   }
-
-                  return Center(child: Text('오류: ${snapshot.error}'));
-                }
-
-                final allPlans = snapshot.data ?? [];
-
-                final screenSize = MediaQuery.of(context).size;
-                final isNarrowPortrait = screenSize.width < 420 && screenSize.width < screenSize.height;
-
-                if (isNarrowPortrait) {
-                  // Vertical day list for narrow/phone portrait screens
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: 7,
-                    itemBuilder: (context, dayIndex) {
-                      final date = weekDates[dayIndex];
-                      final isToday = DateHelper.isToday(date);
-                      final dayPlans = allPlans.where((plan) => DateHelper.isSameDay(plan.date, date)).toList();
-
-                      return GestureDetector(
-                        onTap: () => _addPlanForDate(date, weekStart, weekEnd),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: isToday ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                                child: Row(
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          DateHelper.getWeekdayName(date),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: isToday ? Colors.white : null,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${date.day}',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: isToday ? Colors.white : null,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Spacer(),
-                                    IconButton(
-                                      icon: const Icon(Icons.add, color: Colors.white),
-                                      onPressed: () => _addPlanForDate(date, weekStart, weekEnd),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(8),
-                                    bottomRight: Radius.circular(8),
-                                  ),
-                                ),
-                                child: dayPlans.isEmpty
-                                    ? const Center(
-                                        child: Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 8),
-                                          child: Text('일정이 없습니다', style: TextStyle(color: Colors.grey)),
-                                        ),
-                                      )
-                                    : Column(
-                                        children: dayPlans.map((plan) {
-                                          return GestureDetector(
-                                            onTap: () => _showPlanDetails(plan, weekStart, weekEnd),
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(bottom: 8),
-                                              child: plan.subjectId != null
-                                                  ? StreamBuilder<Subject?>(
-                                                      stream: _firestoreService.getSubjectById(plan.subjectId!).asStream(),
-                                                      builder: (context, snapshot) {
-                                                        Color? subjectColor;
-                                                        Widget? subjectIcon;
-
-                                                        if (snapshot.hasData && snapshot.data != null) {
-                                                          final subject = snapshot.data!;
-                                                          subjectColor = Color(int.parse(subject.color.replaceFirst('#', '0xFF')));
-                                                          subjectIcon = Icon(
-                                                            SubjectIconHelper.getIcon(subject.icon),
-                                                            size: 14,
-                                                            color: subjectColor,
-                                                          );
-                                                        }
-
-                                                        return Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                                          decoration: BoxDecoration(
-                                                            gradient: plan.isCompleted
-                                                                ? LinearGradient(
-                                                                    colors: [Colors.green[50]!, Colors.green[100]!],
-                                                                    begin: Alignment.topLeft,
-                                                                    end: Alignment.bottomRight,
-                                                                  )
-                                                                : LinearGradient(
-                                                                    colors: [
-                                                                      Theme.of(context).colorScheme.primaryContainer,
-                                                                      Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
-                                                                    ],
-                                                                    begin: Alignment.topLeft,
-                                                                    end: Alignment.bottomRight,
-                                                                  ),
-                                                            borderRadius: BorderRadius.circular(6),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: (subjectColor ?? Colors.grey).withAlpha(51),
-                                                                blurRadius: 4.0,
-                                                                offset: const Offset(0, 1.0),
-                                                              ),
-                                                            ],
-                                                            border: subjectColor != null
-                                                                ? Border(left: BorderSide(color: subjectColor, width: 3))
-                                                                : Border.all(
-                                                                    color: plan.isCompleted
-                                                                        ? Colors.green.withAlpha(128)
-                                                                        : Theme.of(context).colorScheme.primary.withAlpha(77),
-                                                                    width: 1,
-                                                                  ),
-                                                          ),
-                                                          child: Row(
-                                                            children: [
-                                                              if (plan.isCompleted)
-                                                                Icon(Icons.check_circle, size: 14, color: Colors.green[700])
-                                                              else if (subjectIcon != null) ...[
-                                                                subjectIcon,
-                                                                const SizedBox(width: 8),
-                                                              ],
-                                                              Expanded(
-                                                                child: Text(
-                                                                  plan.title,
-                                                                  style: TextStyle(
-                                                                    fontSize: 14,
-                                                                    fontWeight: FontWeight.w500,
-                                                                    decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                                                                  ),
-                                                                  maxLines: 2,
-                                                                  overflow: TextOverflow.ellipsis,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
-                                                    )
-                                                  : Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                                      decoration: BoxDecoration(
-                                                        color: plan.isCompleted
-                                                            ? Colors.green[100]
-                                                            : Theme.of(context).colorScheme.primaryContainer,
-                                                        borderRadius: BorderRadius.circular(6),
-                                                      ),
-                                                      child: Text(
-                                                        plan.title,
-                                                        style: TextStyle(
-                                                          fontSize: 14,
-                                                          decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                                                        ),
-                                                        maxLines: 2,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                  return _buildWeekBoard(
+                    weekStart: weekStart,
+                    weekEnd: weekEnd,
+                    weekDates: weekDates,
+                    allPlans: allPlans,
                   );
-                }
-
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 7,
-                    childAspectRatio: 0.8,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemCount: 14, // 7일 x 2줄 (날짜 + 내용)
-                  itemBuilder: (context, index) {
-                    if (index < 7) {
-                      // 첫 번째 줄: 날짜 헤더
-                      final date = weekDates[index];
-                      final isToday = DateHelper.isToday(date);
-
-                      return GestureDetector(
-                        onTap: () => _addPlanForDate(date, weekStart, weekEnd),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isToday
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                DateHelper.getWeekdayName(date),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isToday ? Colors.white : null,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${date.day}',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: isToday ? Colors.white : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    } else {
-                      // 두 번째 줄: 해당 날짜의 계획 목록
-                      final dayIndex = index - 7;
-                      final date = weekDates[dayIndex];
-                      final dayPlans = allPlans
-                          .where((plan) => DateHelper.isSameDay(plan.date, date))
-                          .toList();
-
-                      return GestureDetector(
-                        onTap: () => _addPlanForDate(date, weekStart, weekEnd),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: dayPlans.isEmpty
-                              ? const Center(
-                                  child: Icon(
-                                    Icons.add_circle_outline,
-                                    color: Colors.grey,
-                                    size: 24,
-                                  ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.all(4),
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: dayPlans.length,
-                                  itemBuilder: (context, i) {
-                                    final plan = dayPlans[i];
-                                    return GestureDetector(
-                                      onTap: () => _showPlanDetails(plan, weekStart, weekEnd),
-                                      child: plan.subjectId != null
-                                          ? StreamBuilder<Subject?>(
-                                              stream: _firestoreService.getSubjectById(plan.subjectId!).asStream(),
-                                              builder: (context, snapshot) {
-                                                Color? subjectColor;
-                                                Widget? subjectIcon;
-
-                                                if (snapshot.hasData && snapshot.data != null) {
-                                                  final subject = snapshot.data!;
-                                                  subjectColor = Color(int.parse(subject.color.replaceFirst('#', '0xFF')));
-                                                  subjectIcon = Icon(
-                                                    SubjectIconHelper.getIcon(subject.icon),
-                                                    size: 10,
-                                                    color: subjectColor,
-                                                  );
-                                                }
-
-                                                return Container(
-                                                  margin: const EdgeInsets.only(bottom: 3),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    gradient: plan.isCompleted
-                                                        ? LinearGradient(
-                                                            colors: [Colors.green[50]!, Colors.green[100]!],
-                                                            begin: Alignment.topLeft,
-                                                            end: Alignment.bottomRight,
-                                                          )
-                                                        : LinearGradient(
-                                                            colors: [
-                                                              Theme.of(context).colorScheme.primaryContainer,
-                                                              Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
-                                                            ],
-                                                            begin: Alignment.topLeft,
-                                                            end: Alignment.bottomRight,
-                                                          ),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: (subjectColor ?? Colors.grey).withAlpha(51),
-                                                        blurRadius: 4,
-                                                        offset: const Offset(0, 1.0),
-                                                      ),
-                                                    ],
-                                                    border: subjectColor != null
-                                                        ? Border(left: BorderSide(color: subjectColor, width: 3))
-                                                        : Border.all(
-                                                            color: plan.isCompleted
-                                                                ? Colors.green.withAlpha(128)
-                                                                : Theme.of(context).colorScheme.primary.withAlpha(77),
-                                                            width: 1,
-                                                          ),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      if (plan.isCompleted)
-                                                        Icon(Icons.check_circle, size: 10, color: Colors.green[700])
-                                                      else if (subjectIcon != null) ...[
-                                                        subjectIcon,
-                                                        const SizedBox(width: 4),
-                                                      ],
-                                                      Expanded(
-                                                        child: Text(
-                                                          plan.title,
-                                                          style: TextStyle(
-                                                            fontSize: 10,
-                                                            fontWeight: FontWeight.w500,
-                                                            decoration: plan.isCompleted
-                                                                ? TextDecoration.lineThrough
-                                                                : null,
-                                                          ),
-                                                          maxLines: 2,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                          : Container(
-                                              margin: const EdgeInsets.only(bottom: 2),
-                                              padding: const EdgeInsets.all(4),
-                                              decoration: BoxDecoration(
-                                                color: plan.isCompleted
-                                                    ? Colors.green[100]
-                                                    : Theme.of(context).colorScheme.primaryContainer,
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                plan.title,
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  decoration: plan.isCompleted
-                                                      ? TextDecoration.lineThrough
-                                                      : null,
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                    );
-                                  },
-                                ),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
+                },
+              );
+            },
           ),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addPlanForDate(DateTime.now(), weekStart, weekEnd),
+        backgroundColor: colorScheme.primary,
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('계획 추가'),
       ),
     );
+  }
+
+  void _goToCurrentWeek() {
+    setState(() {
+      _selectedWeek = DateTime.now();
+    });
+  }
+
+  Widget _buildHeader(DateTime weekStart, DateTime weekEnd, ColorScheme colorScheme) {
+    final textColor = colorScheme.onPrimaryContainer;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '주간 목표',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+              const Spacer(),
+              FilledButton.tonalIcon(
+                onPressed: _goToCurrentWeek,
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.surface,
+                  foregroundColor: textColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+                icon: const Icon(Icons.today, size: 16),
+                label: const Text('이번 주'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildNavButton(
+                icon: Icons.chevron_left,
+                onPressed: () => _changeWeek(-1),
+                foreground: textColor,
+                background: colorScheme.surface.withAlpha(200),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withAlpha(230),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${DateHelper.toMonthString(weekStart)} 주간',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_formatShortDate(weekStart)} ~ ${_formatShortDate(weekEnd)}',
+                        style: TextStyle(fontSize: 10, color: textColor.withAlpha(180)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _buildNavButton(
+                icon: Icons.chevron_right,
+                onPressed: () => _changeWeek(1),
+                foreground: textColor,
+                background: colorScheme.surface.withAlpha(200),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required Color foreground,
+    required Color background,
+  }) {
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onPressed,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: foreground),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object? error) {
+    if (error is FirestoreIndexException) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF7ED),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF8C98A)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B)),
+                  SizedBox(width: 8),
+                  Text(
+                    '데이터 조회 오류',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text('이 화면을 보려면 Firestore 복합 인덱스가 필요합니다.'),
+              if (error.indexUrl != null) ...[
+                const SizedBox(height: 12),
+                SelectableText(
+                  error.indexUrl!,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: () => launchUrlString(error.indexUrl!),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('인덱스 생성 페이지 열기'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+    return Center(child: Text('오류: $error'));
+  }
+
+  Widget _buildCompactWeekList({
+    required DateTime weekStart,
+    required DateTime weekEnd,
+    required List<DateTime> weekDates,
+    required List<WeeklyPlan> allPlans,
+  }) {
+    return ListView.separated(
+      primary: true,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      itemCount: weekDates.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      itemBuilder: (context, index) {
+        final date = weekDates[index];
+        final dayPlans = allPlans.where((plan) => DateHelper.isSameDay(plan.date, date)).toList();
+        final isToday = DateHelper.isToday(date);
+
+        return _buildDayCard(
+          date: date,
+          isToday: isToday,
+          plans: dayPlans,
+          weekStart: weekStart,
+          weekEnd: weekEnd,
+          compact: true,
+        );
+      },
+    );
+  }
+
+  Widget _buildWeekBoard({
+    required DateTime weekStart,
+    required DateTime weekEnd,
+    required List<DateTime> weekDates,
+    required List<WeeklyPlan> allPlans,
+  }) {
+    return SingleChildScrollView(
+      primary: true,
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(weekDates.length, (index) {
+          final date = weekDates[index];
+          final dayPlans = allPlans.where((plan) => DateHelper.isSameDay(plan.date, date)).toList();
+          final isToday = DateHelper.isToday(date);
+
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: index == weekDates.length - 1 ? 0 : 10),
+              child: _buildDayCard(
+                date: date,
+                isToday: isToday,
+                plans: dayPlans,
+                weekStart: weekStart,
+                weekEnd: weekEnd,
+                compact: false,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildDayCard({
+    required DateTime date,
+    required bool isToday,
+    required List<WeeklyPlan> plans,
+    required DateTime weekStart,
+    required DateTime weekEnd,
+    required bool compact,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 16 : 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildDayHeader(
+            date: date,
+            isToday: isToday,
+            compact: compact,
+          ),
+          const SizedBox(height: 12),
+          if (plans.isEmpty)
+            _buildEmptyDayPlaceholder(
+              compact: compact,
+              onAdd: () => _addPlanForDate(date, weekStart, weekEnd),
+            )
+          else
+            Column(
+              children: plans
+                  .map((plan) => _buildPlanCard(plan, weekStart, weekEnd))
+                  .toList(),
+            ),
+          if (plans.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _buildAddPlanButton(
+              compact: compact,
+              onAdd: () => _addPlanForDate(date, weekStart, weekEnd),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayHeader({
+    required DateTime date,
+    required bool isToday,
+    required bool compact,
+  }) {
+    final dayLabel = DateHelper.getWeekdayName(date);
+    final colorScheme = Theme.of(context).colorScheme;
+    final accent = colorScheme.primary;
+    final headerColor = isToday ? accent.withAlpha(28) : colorScheme.surfaceContainerHighest;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: headerColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isToday ? accent.withAlpha(120) : colorScheme.outlineVariant.withAlpha(120),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$dayLabel요일',
+                  style: TextStyle(
+                    fontSize: compact ? 12 : 13,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatShortDate(date),
+                  style: TextStyle(
+                    fontSize: compact ? 15 : 16,
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isToday)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: accent.withAlpha(20),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Text(
+                '오늘',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: accent,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyDayPlaceholder({
+    required bool compact,
+    required VoidCallback onAdd,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onAdd,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withAlpha(130),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.add_circle_outline, color: Colors.grey[500], size: compact ? 22 : 26),
+            const SizedBox(height: 6),
+            Text(
+              '일정을 추가해보세요',
+              style: TextStyle(color: Colors.grey[600], fontSize: compact ? 12 : 13),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '예시: 수학 문제집 2챕터',
+                style: TextStyle(fontSize: compact ? 10 : 11, color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddPlanButton({
+    required bool compact,
+    required VoidCallback onAdd,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return FilledButton.tonalIcon(
+      onPressed: onAdd,
+      style: FilledButton.styleFrom(
+        padding: EdgeInsets.symmetric(vertical: compact ? 10 : 12),
+        backgroundColor: colorScheme.primary.withAlpha(20),
+        foregroundColor: colorScheme.primary,
+        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      icon: const Icon(Icons.add),
+      label: const Text('일정 추가'),
+    );
+  }
+
+  Widget _buildPlanCard(WeeklyPlan plan, DateTime weekStart, DateTime weekEnd) {
+    if (plan.subjectId != null) {
+      return StreamBuilder<Subject?>(
+        stream: _firestoreService.getSubjectById(plan.subjectId!).asStream(),
+        builder: (context, snapshot) {
+          return _buildPlanCardContent(plan, weekStart, weekEnd, snapshot.data);
+        },
+      );
+    }
+    return _buildPlanCardContent(plan, weekStart, weekEnd, null);
+  }
+
+  Widget _buildPlanCardContent(
+    WeeklyPlan plan,
+    DateTime weekStart,
+    DateTime weekEnd,
+    Subject? subject,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final subjectName = subject?.name ?? (plan.subject.isNotEmpty ? plan.subject : null);
+    final subjectColor = subject != null
+        ? Color(int.parse(subject.color.replaceFirst('#', '0xFF')))
+        : colorScheme.primary;
+    final iconData = plan.isCompleted
+        ? Icons.check_rounded
+        : SubjectIconHelper.getIcon(subject?.icon ?? 'book');
+    final metaPieces = <String>[];
+    if (subjectName != null) metaPieces.add(subjectName);
+    if (plan.pageRanges.isNotEmpty) {
+      metaPieces.add('p.${plan.pageRanges.join(', ')}');
+    }
+    final metaText = metaPieces.join(' · ');
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showPlanDetails(plan, weekStart, weekEnd),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: plan.isCompleted ? const Color(0xFFEAF7EE) : colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: plan.isCompleted
+                  ? const Color(0xFFB7E4C7)
+                  : colorScheme.outlineVariant.withAlpha(140),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(10),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: subjectColor.withAlpha(28),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(iconData, color: subjectColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.title,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (metaText.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        metaText,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (plan.notes.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        plan.notes,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Checkbox(
+                value: plan.isCompleted,
+                onChanged: (_) => _togglePlanComplete(plan),
+                activeColor: colorScheme.primary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatShortDate(DateTime date) {
+    return '${date.month}월 ${date.day}일';
   }
 
   void _addPlanForDate(DateTime date, DateTime weekStart, DateTime weekEnd) {
@@ -531,6 +640,17 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
           weekEnd: weekEnd,
         ),
       ),
+    );
+  }
+
+  Future<void> _togglePlanComplete(WeeklyPlan plan) async {
+    final next = !plan.isCompleted;
+    await _firestoreService.updateWeeklyPlan(
+      plan.id,
+      {
+        'isCompleted': next,
+        'completedAt': next ? DateTime.now() : null,
+      },
     );
   }
 
@@ -669,111 +789,6 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                 const SizedBox(height: 12),
               ],
 
-              // 세부 목표
-              if (plan.subtasks.isNotEmpty) ...[
-                const Divider(),
-                Row(
-                  children: [
-                    const Icon(Icons.checklist, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      '세부 목표 (${plan.subtasks.where((s) => s.isCompleted).length}/${plan.subtasks.length})',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ...plan.subtasks.map((subtask) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              subtask.isCompleted ? Icons.check_box : Icons.check_box_outline_blank,
-                              color: subtask.isCompleted ? Colors.green : Colors.grey,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                subtask.title,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  decoration: subtask.isCompleted ? TextDecoration.lineThrough : null,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (subtask.pageRange != null || subtask.estimatedMinutes > 0) ...[
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              if (subtask.pageRange != null) ...[
-                                Icon(Icons.auto_stories, size: 14, color: Colors.grey[600]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  subtask.getPageProgressText(),
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                ),
-                                if (subtask.estimatedMinutes > 0)
-                                  const SizedBox(width: 12),
-                              ],
-                              if (subtask.estimatedMinutes > 0) ...[
-                                Icon(Icons.timer_outlined, size: 14, color: Colors.grey[600]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${subtask.estimatedMinutes}분',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                        if (subtask.pageRange != null && subtask.completedPage != null) ...[
-                          const SizedBox(height: 4),
-                          LinearProgressIndicator(
-                            value: subtask.getPageProgress() / 100,
-                            minHeight: 3,
-                            backgroundColor: Colors.grey[300],
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                )),
-                const SizedBox(height: 8),
-                // 총 예상 시간
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.timer, size: 18, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Text(
-                        '총 예상 시간: ${plan.subtasks.fold<int>(0, (sum, s) => sum + s.estimatedMinutes)}분',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -790,6 +805,15 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
             icon: const Icon(Icons.edit),
             label: const Text('수정'),
           ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _confirmDeletePlan(plan);
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            icon: const Icon(Icons.delete),
+            label: const Text('삭제'),
+          ),
         ],
       ),
     );
@@ -805,6 +829,44 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
           weekEnd: weekEnd,
           plan: plan,
         ),
+      ),
+    );
+  }
+
+  void _confirmDeletePlan(WeeklyPlan plan) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('주간 일정 삭제'),
+        content: const Text('정말 이 일정을 삭제하시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                if (plan.parentMonthlyId != null && plan.parentMonthlyId!.isNotEmpty) {
+                  await _firestoreService.removeWeeklyIdFromMonthly(plan.parentMonthlyId!, plan.id);
+                }
+                await _firestoreService.deleteWeeklyPlan(plan.id);
+                if (!mounted) return;
+                navigator.pop();
+              } catch (e) {
+                if (!mounted) return;
+                navigator.pop();
+                messenger.showSnackBar(
+                  SnackBar(content: Text('삭제 실패: $e'), backgroundColor: Colors.red),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
       ),
     );
   }

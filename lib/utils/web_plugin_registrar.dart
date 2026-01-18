@@ -1,0 +1,3 @@
+void registerWebPlugins() {
+  // No-op for non-web platforms.
+}

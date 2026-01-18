@@ -8,7 +8,14 @@ import '../../services/firestore_service.dart';
 import '../../utils/date_utils.dart';
 
 class GoalSettingsScreen extends StatefulWidget {
-  const GoalSettingsScreen({super.key});
+  final GoalPeriod? initialPeriod;
+  final int? initialTargetMinutes;
+
+  const GoalSettingsScreen({
+    super.key,
+    this.initialPeriod,
+    this.initialTargetMinutes,
+  });
 
   @override
   State<GoalSettingsScreen> createState() => _GoalSettingsScreenState();
@@ -20,20 +27,43 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   int _targetMinutes = 0;
   bool _useSubjectTargets = false;
   final Map<String, int> _subjectTargets = {};
+  late final TextEditingController _hoursController;
+  late final TextEditingController _minutesController;
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialPeriod != null) {
+      _selectedPeriod = widget.initialPeriod!;
+    }
+    if (widget.initialTargetMinutes != null) {
+      _targetHours = widget.initialTargetMinutes! ~/ 60;
+      _targetMinutes = widget.initialTargetMinutes! % 60;
+    }
+    _hoursController = TextEditingController(
+      text: widget.initialTargetMinutes != null ? _targetHours.toString() : '',
+    );
+    _minutesController = TextEditingController(
+      text: widget.initialTargetMinutes != null ? _targetMinutes.toString() : '',
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadGoals());
+  }
+
+  @override
+  void dispose() {
+    _hoursController.dispose();
+    _minutesController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadGoals() async {
     final userId = context.read<AuthProvider>().userId;
     if (userId == null) return;
-    await context.read<GoalProvider>().loadGoals(userId, DateTime.now());
-    final goal = context.read<GoalProvider>().dailyGoal;
+    final goalProvider = context.read<GoalProvider>();
+    await goalProvider.loadGoals(userId, DateTime.now());
+    final goal = goalProvider.dailyGoal;
     if (goal != null) {
-      await context.read<GoalProvider>().calculateAchievement(userId, goal);
+      await goalProvider.calculateAchievement(userId, goal);
     }
   }
 
@@ -90,6 +120,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                               SizedBox(
                                 width: 80,
                                 child: TextField(
+                                  controller: _hoursController,
                                   keyboardType: TextInputType.number,
                                   decoration: const InputDecoration(
                                     border: OutlineInputBorder(),
@@ -104,6 +135,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                               SizedBox(
                                 width: 80,
                                 child: TextField(
+                                  controller: _minutesController,
                                   keyboardType: TextInputType.number,
                                   decoration: const InputDecoration(
                                     border: OutlineInputBorder(),
@@ -258,6 +290,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   Future<void> _saveGoal() async {
     final userId = context.read<AuthProvider>().userId;
     if (userId == null) return;
+    final goalProvider = context.read<GoalProvider>();
 
     final totalMinutes = _targetHours * 60 + _targetMinutes;
     final now = DateTime.now();
@@ -274,13 +307,12 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
       createdAt: DateTime.now(),
     );
 
-    await context.read<GoalProvider>().setGoal(userId, goal);
-    await context.read<GoalProvider>().calculateAchievement(userId, goal);
+    await goalProvider.setGoal(userId, goal);
+    await goalProvider.calculateAchievement(userId, goal);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('목표가 저장되었습니다')),
-      );
-    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('목표가 저장되었습니다')),
+    );
   }
 }

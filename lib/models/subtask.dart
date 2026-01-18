@@ -6,6 +6,9 @@ class Subtask {
   final int order;
   final String? pageRange; // 페이지 범위 (예: "45-67")
   final int? completedPage; // 완료한 페이지 번호
+  final String? resourceId; // 연결된 강의/문제집 ID
+  final String? resourceTitle; // 연결된 강의/문제집 이름
+  final String? resourceType; // 'lecture' | 'book'
 
   Subtask({
     required this.id,
@@ -15,6 +18,9 @@ class Subtask {
     required this.order,
     this.pageRange,
     this.completedPage,
+    this.resourceId,
+    this.resourceTitle,
+    this.resourceType,
   });
 
   // Firestore Map에서 Subtask 객체 생성
@@ -27,6 +33,9 @@ class Subtask {
       order: map['order'] ?? 0,
       pageRange: map['pageRange'],
       completedPage: map['completedPage'],
+      resourceId: map['resourceId'],
+      resourceTitle: map['resourceTitle'],
+      resourceType: map['resourceType'],
     );
   }
 
@@ -40,6 +49,9 @@ class Subtask {
       'order': order,
       'pageRange': pageRange,
       'completedPage': completedPage,
+      'resourceId': resourceId,
+      'resourceTitle': resourceTitle,
+      'resourceType': resourceType,
     };
   }
 
@@ -52,6 +64,9 @@ class Subtask {
     int? order,
     String? pageRange,
     int? completedPage,
+    String? resourceId,
+    String? resourceTitle,
+    String? resourceType,
   }) {
     return Subtask(
       id: id ?? this.id,
@@ -61,6 +76,9 @@ class Subtask {
       order: order ?? this.order,
       pageRange: pageRange ?? this.pageRange,
       completedPage: completedPage ?? this.completedPage,
+      resourceId: resourceId ?? this.resourceId,
+      resourceTitle: resourceTitle ?? this.resourceTitle,
+      resourceType: resourceType ?? this.resourceType,
     );
   }
 
@@ -106,7 +124,10 @@ class Subtask {
   // 페이지 진행 텍스트 (예: "52/67" 또는 "8/23페이지")
   String getPageProgressText() {
     if (pageRange == null) return '';
-    if (completedPage == null) return pageRange!;
+    final unit = resourceType == 'lecture' ? '강' : '페이지';
+    if (completedPage == null) {
+      return resourceType == 'lecture' ? '${pageRange!}강' : pageRange!;
+    }
 
     final parts = pageRange!.split('-');
     if (parts.length != 2) return pageRange!;
@@ -119,6 +140,6 @@ class Subtask {
     final total = end - start + 1;
     final completed = completedPage! - start + 1;
 
-    return '$completedPage/$end (${completed.clamp(0, total)}/$total페이지)';
+    return '$completedPage/$end (${completed.clamp(0, total)}/$total$unit)';
   }
 }
