@@ -410,6 +410,11 @@ class _CompletionTrackerDialogState extends State<CompletionTrackerDialog> {
     final parts = subtask.pageRange!.split('-');
     if (parts.length != 2) return const SizedBox.shrink();
 
+    final isLecture = subtask.resourceType == 'lecture';
+    final unitLabel = isLecture ? '강의' : '페이지';
+    final unitPrefix = isLecture ? '강' : 'p.';
+    final icon = isLecture ? Icons.play_lesson_rounded : Icons.auto_stories;
+
     final start = int.tryParse(parts[0].trim());
     final end = int.tryParse(parts[1].trim());
     if (start == null || end == null || end <= start) return const SizedBox.shrink();
@@ -424,22 +429,22 @@ class _CompletionTrackerDialogState extends State<CompletionTrackerDialog> {
         color: Colors.blue[50],
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.auto_stories, size: 16, color: Colors.blue[700]),
-                  const SizedBox(width: 6),
-                  Text(
-                    '페이지 진행도',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue[900],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 16, color: Colors.blue[700]),
+                    const SizedBox(width: 6),
+                    Text(
+                      '$unitLabel 진행도',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue[900],
                     ),
                   ),
                 ],
@@ -451,7 +456,7 @@ class _CompletionTrackerDialogState extends State<CompletionTrackerDialog> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'p.$currentPage / p.$end',
+                  '$unitPrefix$currentPage / $unitPrefix$end',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

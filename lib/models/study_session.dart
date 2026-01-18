@@ -70,9 +70,9 @@ class StudySession {
     final hours = minutes ~/ 60;
     final remainingMinutes = minutes % 60;
     if (hours > 0) {
-      return '${hours}시간 ${remainingMinutes}분';
+      return '$hours시간 $remainingMinutes분';
     }
-    return '${remainingMinutes}분 ${remainingSeconds}초';
+    return '$remainingMinutes분 $remainingSeconds초';
   }
 
   factory StudySession.fromFirestore(DocumentSnapshot doc) {

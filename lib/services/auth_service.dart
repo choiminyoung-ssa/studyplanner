@@ -89,11 +89,28 @@ class AuthService {
     }
   }
 
+  bool isDemoCredentials(String email, String password) {
+    return email.trim() == 'sangsan' && password == 'sangsan';
+  }
+
+  Future<UserCredential?> signInDemo() async {
+    try {
+      return await _auth.signInAnonymously();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'operation-not-allowed') {
+        throw Exception('데모 로그인을 사용하려면 Firebase Auth에서 익명 로그인을 활성화해야 합니다.');
+      }
+      throw Exception('데모 로그인 중 오류가 발생했습니다: ${e.message}');
+    } catch (e) {
+      throw Exception('데모 로그인 중 예기치 않은 오류가 발생했습니다.');
+    }
+  }
+
   // 로그아웃 (Google 로그아웃도 포함)
   Future<void> signOut() async {
     try {
       // Google 로그인 상태인지 확인하고 로그아웃
-      if (await _googleSignIn.isSignedIn()) {
+      if (!kIsWeb && await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
       await _auth.signOut();
@@ -127,6 +144,10 @@ class AuthService {
   // Google 로그인
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider();
+        return await _auth.signInWithPopup(provider);
+      }
       // Google 로그인 프로세스 시작
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
@@ -180,7 +201,9 @@ class AuthService {
   // Google 로그아웃
   Future<void> signOutGoogle() async {
     try {
-      await _googleSignIn.signOut();
+      if (!kIsWeb) {
+        await _googleSignIn.signOut();
+      }
       await _auth.signOut();
     } catch (e) {
       throw Exception('Google 로그아웃 중 오류가 발생했습니다.');

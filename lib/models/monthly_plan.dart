@@ -16,6 +16,7 @@ class MonthlyPlan {
   final String tag;
   final int priority; // 1: 높음, 2: 중간, 3: 낮음
   final bool isCompleted;
+  final DateTime? completedAt;
   final List<String> relatedWeeklyIds; // 연결된 주간 계획 ID 목록
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -35,6 +36,7 @@ class MonthlyPlan {
     this.tag = '',
     this.priority = 2,
     this.isCompleted = false,
+    this.completedAt,
     this.relatedWeeklyIds = const [],
     required this.createdAt,
     required this.updatedAt,
@@ -67,6 +69,7 @@ class MonthlyPlan {
       endDate: data['endDate'] != null ? (data['endDate'] as Timestamp).toDate() : null,
       priority: data['priority'] ?? 2,
       isCompleted: data['isCompleted'] ?? false,
+      completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
       relatedWeeklyIds: List<String>.from(data['relatedWeeklyIds'] ?? []),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
@@ -89,6 +92,7 @@ class MonthlyPlan {
       'tag': tag,
       'priority': priority,
       'isCompleted': isCompleted,
+      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'relatedWeeklyIds': relatedWeeklyIds,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -111,6 +115,7 @@ class MonthlyPlan {
     String? tag,
     int? priority,
     bool? isCompleted,
+    DateTime? completedAt,
     List<String>? relatedWeeklyIds,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -130,6 +135,7 @@ class MonthlyPlan {
       tag: tag ?? this.tag,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
+      completedAt: completedAt ?? this.completedAt,
       relatedWeeklyIds: relatedWeeklyIds ?? this.relatedWeeklyIds,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

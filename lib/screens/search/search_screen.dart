@@ -19,7 +19,7 @@ class _SearchScreenState extends State<SearchScreen> {
   DateTime? _endDate;
   String? _selectedSubjectId;
   String _completedFilter = 'all'; // all, completed, incomplete
-  Set<int> _priorities = {};
+  final Set<int> _priorities = {};
 
   List<SearchResult> _results = [];
   bool _isLoading = false;
@@ -146,7 +146,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 decoration: const InputDecoration(labelText: '과목'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('전체')),
-                  ...subjects.map((s) => DropdownMenuItem(value: s['id'], child: Text(s['name']!))).toList(),
+                  ...subjects.map((s) => DropdownMenuItem(value: s['id'], child: Text(s['name']!))),
                 ],
                 onChanged: (v) => setState(() => _selectedSubjectId = v),
               );
@@ -183,7 +183,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 selected: _priorities.contains(p),
                 onSelected: (sel) {
                   setState(() {
-                    if (sel) _priorities.add(p); else _priorities.remove(p);
+                    if (sel) {
+                      _priorities.add(p);
+                    } else {
+                      _priorities.remove(p);
+                    }
                   });
                 },
               ),
@@ -212,7 +216,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   // Open the appropriate detail / edit screen
                 },
               );
-            }).toList(),
+            }),
         ],
       ),
     );

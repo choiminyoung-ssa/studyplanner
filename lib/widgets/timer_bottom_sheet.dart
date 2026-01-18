@@ -52,7 +52,7 @@ class _TimerBottomSheetState extends State<TimerBottomSheet> {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -84,15 +84,17 @@ class _TimerBottomSheetState extends State<TimerBottomSheet> {
                     _buildControlButton('정지', Icons.stop, () async {
                       final userId = context.read<AuthProvider>().userId;
                       if (userId == null) return;
-                      await timerProvider.stop(userId, _selectedPlanId);
                       final goalProvider = context.read<GoalProvider>();
+                      final navigator = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
+                      await timerProvider.stop(userId, _selectedPlanId);
                       final goal = goalProvider.dailyGoal;
                       if (goal != null) {
                         await goalProvider.calculateAchievement(userId, goal);
                       }
                       if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      navigator.pop();
+                      messenger.showSnackBar(
                         const SnackBar(content: Text('학습 시간이 저장되었습니다')),
                       );
                     }),
@@ -123,7 +125,7 @@ class _TimerBottomSheetState extends State<TimerBottomSheet> {
         }
 
         return DropdownButtonFormField<String>(
-          value: selectedId,
+          initialValue: selectedId,
           decoration: InputDecoration(
             labelText: '연결할 일정',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -195,8 +197,8 @@ class _TimerBottomSheetState extends State<TimerBottomSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('예상 ${estimated}분'),
-                    Text('실제 ${actual}분'),
+                    Text('예상 $estimated분'),
+                    Text('실제 $actual분'),
                   ],
                 ),
                 const SizedBox(height: 8),

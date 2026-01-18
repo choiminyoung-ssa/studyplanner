@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import '../../models/notification_log.dart';
 import '../../models/notification_settings.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../services/firestore_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -22,9 +25,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Future<void> _loadSettings() async {
     final userId = context.read<AuthProvider>().userId;
     if (userId == null) return;
-    await context.read<NotificationProvider>().loadSettings(userId);
-    final granted = await context.read<NotificationProvider>().checkAndRequestPermission(userId);
-    if (!granted && mounted) {
+    final notificationProvider = context.read<NotificationProvider>();
+    await notificationProvider.loadSettings(userId);
+    if (kIsWeb) return;
+    final granted = await notificationProvider.checkAndRequestPermission(userId);
+    if (!mounted) return;
+    if (!granted) {
       await _showPermissionDialog();
     }
   }
@@ -70,6 +76,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final userId = context.watch<AuthProvider>().userId;
+
     return Consumer<NotificationProvider>(
       builder: (context, provider, _) {
         final settings = provider.settings;
@@ -161,11 +169,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: provider.permissionGranted
-                    ? provider.showTestNotification
+                    ? () {
+                        if (userId == null) return;
+                        provider.showTestNotification(userId);
+                      }
                     : null,
                 icon: const Icon(Icons.notifications_active),
                 label: const Text('테스트 알림 보내기'),
               ),
+              const SizedBox(height: 16),
+              if (userId != null) _buildNotificationLogSection(userId),
             ],
           ),
         );
@@ -215,5 +228,37 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final userId = context.read<AuthProvider>().userId;
     if (userId == null) return;
     await context.read<NotificationProvider>().updateSettings(userId, settings);
+  }
+
+  Widget _buildNotificationLogSection(String userId) {
+    return StreamBuilder<List<NotificationLog>>(
+      stream: FirestoreService().getNotificationLogs(userId),
+      builder: (context, snapshot) {
+        final logs = snapshot.data ?? [];
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('최근 알림 로그', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (logs.isEmpty)
+                  Text('표시할 로그가 없습니다.', style: TextStyle(color: Colors.grey[600])),
+                ...logs.map(
+                  (log) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.notifications),
+                    title: Text(log.title),
+                    subtitle: Text('${log.body}\\n${log.createdAt.toLocal()}'),
+                    isThreeLine: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -13,20 +14,52 @@ class NotificationService {
   NotificationService(this._firestoreService);
 
   Future<void> initialize() async {
+    if (kIsWeb) return;
     tz.initializeTimeZones();
-    try {
-      tz.setLocalLocation(tz.getLocation('Asia/Seoul'));
-    } catch (_) {
-      tz.setLocalLocation(tz.local);
-    }
+    tz.setLocalLocation(tz.local);
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings();
     const settings = InitializationSettings(android: androidSettings, iOS: iosSettings);
     await _notifications.initialize(settings);
+
+    final androidImpl = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidImpl?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'plan_reminder',
+        '일정 시작 알림',
+        description: '일정 시작 전에 알려드리는 알림',
+        importance: Importance.high,
+      ),
+    );
+    await androidImpl?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'daily_summary',
+        '일일 요약',
+        description: '아침 요약 알림',
+        importance: Importance.defaultImportance,
+      ),
+    );
+    await androidImpl?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'evening_review',
+        '저녁 리마인더',
+        description: '미완료 일정 리마인더',
+        importance: Importance.defaultImportance,
+      ),
+    );
+    await androidImpl?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'test',
+        '테스트',
+        description: '알림 테스트 채널',
+        importance: Importance.high,
+      ),
+    );
   }
 
   Future<bool> requestPermissions() async {
+    if (kIsWeb) return false;
     final androidStatus = await Permission.notification.request();
     final androidGranted = androidStatus.isGranted;
 
@@ -67,6 +100,7 @@ class NotificationService {
   }
 
   Future<void> schedulePlanReminder(DailyPlan plan, int minutesBefore) async {
+    if (kIsWeb) return;
     final scheduledTime = _calculateReminderTime(plan.date, plan.startTime, minutesBefore);
     if (scheduledTime.isBefore(DateTime.now())) return;
 
@@ -79,8 +113,8 @@ class NotificationService {
 
     await _notifications.zonedSchedule(
       notificationId,
-      '${plan.title} 시작 ${minutesBefore}분 전입니다',
-      '${plan.startTime} - ${plan.endTime} | 준비하세요!',
+      '${plan.title} 곧 시작해요',
+      '$minutesBefore분 후 시작 • ${plan.startTime} ~ ${plan.endTime}',
       tz.TZDateTime.from(scheduledTime, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -100,6 +134,7 @@ class NotificationService {
   }
 
   Future<void> rescheduleAllPlanReminders(String userId, int minutesBefore) async {
+    if (kIsWeb) return;
     final now = DateTime.now();
     final rangeEnd = now.add(const Duration(days: 30));
     final plans = await _firestoreService.getDailyPlansByDateRange(userId, now, rangeEnd);
@@ -111,6 +146,7 @@ class NotificationService {
   }
 
   Future<void> scheduleDailySummary(String userId, String time) async {
+    if (kIsWeb) return;
     final timeParts = time.split(':');
     final hour = int.parse(timeParts[0]);
     final minute = int.parse(timeParts[1]);
@@ -125,7 +161,7 @@ class NotificationService {
     await _notifications.zonedSchedule(
       999999,
       '오늘의 학습 일정',
-      count > 0 ? '오늘 일정 $count개가 기다리고 있어요!' : '오늘은 가볍게 시작해볼까요?',
+      count > 0 ? '오늘 일정 $count개가 있어요. 하루를 시작해볼까요?' : '오늘은 가볍게 시작해볼까요?',
       _nextInstanceOfTime(hour, minute),
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -144,14 +180,25 @@ class NotificationService {
   }
 
   Future<void> scheduleEveningReview(String userId, String time) async {
+    if (kIsWeb) return;
     final timeParts = time.split(':');
     final hour = int.parse(timeParts[0]);
     final minute = int.parse(timeParts[1]);
 
+    final todayPlans = await _firestoreService.getDailyPlansByDateRange(
+      userId,
+      DateTime.now(),
+      DateTime.now(),
+    );
+    final remaining = todayPlans.where((plan) => !plan.isCompleted).length;
+    final body = remaining > 0
+        ? '미완료 일정 $remaining개가 있어요. 오늘을 마무리해볼까요?'
+        : '오늘 일정 완료! 내일 준비도 가볍게 해볼까요?';
+
     await _notifications.zonedSchedule(
       999998,
-      '오늘의 미완료 일정',
-      '아직 완료하지 않은 일정이 있어요. 오늘을 마무리해볼까요?',
+      '오늘의 마무리 리마인더',
+      body,
       _nextInstanceOfTime(hour, minute),
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -170,14 +217,17 @@ class NotificationService {
   }
 
   Future<void> cancelPlanReminder(String planId) async {
+    if (kIsWeb) return;
     await _notifications.cancel(planId.hashCode);
   }
 
   Future<void> cancelAllNotifications() async {
+    if (kIsWeb) return;
     await _notifications.cancelAll();
   }
 
   Future<void> showTestNotification() async {
+    if (kIsWeb) return;
     await _notifications.show(
       777777,
       '테스트 알림',

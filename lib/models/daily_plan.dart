@@ -16,6 +16,7 @@ class DailyPlan {
   final String tag;
   final int priority;
   final bool isCompleted;
+  final DateTime? completedAt;
   final String? parentWeeklyId; // 연결된 주간 계획 ID
   final List<String> sessionIds; // 연결된 학습 세션 ID 목록
   final int totalStudiedSeconds; // 총 학습 시간 (초)
@@ -37,6 +38,7 @@ class DailyPlan {
     this.tag = '',
     this.priority = 2,
     this.isCompleted = false,
+    this.completedAt,
     this.parentWeeklyId,
     this.sessionIds = const [],
     this.totalStudiedSeconds = 0,
@@ -70,6 +72,7 @@ class DailyPlan {
       tag: data['tag'] ?? '',
       priority: data['priority'] ?? 2,
       isCompleted: data['isCompleted'] ?? false,
+      completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
       parentWeeklyId: data['parentWeeklyId'],
       sessionIds: List<String>.from(data['sessionIds'] ?? []),
       totalStudiedSeconds: data['totalStudiedSeconds'] ?? 0,
@@ -93,6 +96,7 @@ class DailyPlan {
       'tag': tag,
       'priority': priority,
       'isCompleted': isCompleted,
+      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'parentWeeklyId': parentWeeklyId,
       'sessionIds': sessionIds,
       'totalStudiedSeconds': totalStudiedSeconds,
@@ -116,6 +120,7 @@ class DailyPlan {
     String? tag,
     int? priority,
     bool? isCompleted,
+    DateTime? completedAt,
     String? parentWeeklyId,
     List<String>? sessionIds,
     int? totalStudiedSeconds,
@@ -137,6 +142,7 @@ class DailyPlan {
       tag: tag ?? this.tag,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
+      completedAt: completedAt ?? this.completedAt,
       parentWeeklyId: parentWeeklyId ?? this.parentWeeklyId,
       sessionIds: sessionIds ?? this.sessionIds,
       totalStudiedSeconds: totalStudiedSeconds ?? this.totalStudiedSeconds,
@@ -145,7 +151,7 @@ class DailyPlan {
     );
   }
 
-  int get estimatedMinutes => subtasks.fold(0, (sum, s) => sum + s.estimatedMinutes);
+  int get estimatedMinutes => subtasks.fold(0, (total, s) => total + s.estimatedMinutes);
 
   int get actualMinutes => totalStudiedSeconds ~/ 60;
 
