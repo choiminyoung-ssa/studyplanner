@@ -183,7 +183,7 @@ class SubjectIconHelper {
     'school': Icons.school,
     'workspace_premium': Icons.workspace_premium,
     'star': Icons.star,
-    'workspace': Icons.workspace,
+    'work': Icons.work,
     'widgets': Icons.widgets,
     'extension': Icons.extension,
   };
