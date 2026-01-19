@@ -18,6 +18,7 @@ class MonthlyPlan {
   final bool isCompleted;
   final DateTime? completedAt;
   final List<String> relatedWeeklyIds; // 연결된 주간 계획 ID 목록
+  final String? googleEventId; // Google Calendar 이벤트 ID
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -38,6 +39,7 @@ class MonthlyPlan {
     this.isCompleted = false,
     this.completedAt,
     this.relatedWeeklyIds = const [],
+    this.googleEventId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -71,6 +73,7 @@ class MonthlyPlan {
       isCompleted: data['isCompleted'] ?? false,
       completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
       relatedWeeklyIds: List<String>.from(data['relatedWeeklyIds'] ?? []),
+      googleEventId: data['googleEventId'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -94,6 +97,7 @@ class MonthlyPlan {
       'isCompleted': isCompleted,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'relatedWeeklyIds': relatedWeeklyIds,
+      'googleEventId': googleEventId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -117,6 +121,7 @@ class MonthlyPlan {
     bool? isCompleted,
     DateTime? completedAt,
     List<String>? relatedWeeklyIds,
+    String? googleEventId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -137,6 +142,7 @@ class MonthlyPlan {
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
       relatedWeeklyIds: relatedWeeklyIds ?? this.relatedWeeklyIds,
+      googleEventId: googleEventId ?? this.googleEventId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

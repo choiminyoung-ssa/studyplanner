@@ -19,6 +19,7 @@ class WeeklyPlan {
   final DateTime? completedAt;
   final String? parentMonthlyId; // 연결된 월간 계획 ID
   final List<String> relatedDailyIds; // 연결된 일간 타임블록 ID 목록
+  final String? googleEventId; // Google Calendar 이벤트 ID
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -40,6 +41,7 @@ class WeeklyPlan {
     this.completedAt,
     this.parentMonthlyId,
     this.relatedDailyIds = const [],
+    this.googleEventId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -73,6 +75,7 @@ class WeeklyPlan {
       completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
       parentMonthlyId: data['parentMonthlyId'],
       relatedDailyIds: List<String>.from(data['relatedDailyIds'] ?? []),
+      googleEventId: data['googleEventId'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -96,6 +99,7 @@ class WeeklyPlan {
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'parentMonthlyId': parentMonthlyId,
       'relatedDailyIds': relatedDailyIds,
+      'googleEventId': googleEventId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -119,6 +123,7 @@ class WeeklyPlan {
     DateTime? completedAt,
     String? parentMonthlyId,
     List<String>? relatedDailyIds,
+    String? googleEventId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -140,6 +145,7 @@ class WeeklyPlan {
       completedAt: completedAt ?? this.completedAt,
       parentMonthlyId: parentMonthlyId ?? this.parentMonthlyId,
       relatedDailyIds: relatedDailyIds ?? this.relatedDailyIds,
+      googleEventId: googleEventId ?? this.googleEventId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

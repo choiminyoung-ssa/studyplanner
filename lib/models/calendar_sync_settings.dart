@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class CalendarSyncSettings {
   final String userId;
   final bool isEnabled;
+  final bool syncDailyPlans;
   final bool syncMonthlyPlans;
   final bool syncWeeklyPlans;
   final bool syncWeeklyTimetable;
@@ -13,6 +14,7 @@ class CalendarSyncSettings {
   const CalendarSyncSettings({
     required this.userId,
     this.isEnabled = false,
+    this.syncDailyPlans = true,
     this.syncMonthlyPlans = true,
     this.syncWeeklyPlans = true,
     this.syncWeeklyTimetable = true,
@@ -27,6 +29,7 @@ class CalendarSyncSettings {
     return CalendarSyncSettings(
       userId: doc.id,
       isEnabled: data['isEnabled'] ?? false,
+      syncDailyPlans: data['syncDailyPlans'] ?? true,
       syncMonthlyPlans: data['syncMonthlyPlans'] ?? true,
       syncWeeklyPlans: data['syncWeeklyPlans'] ?? true,
       syncWeeklyTimetable: data['syncWeeklyTimetable'] ?? true,
@@ -42,6 +45,7 @@ class CalendarSyncSettings {
   Map<String, dynamic> toFirestore() {
     return {
       'isEnabled': isEnabled,
+      'syncDailyPlans': syncDailyPlans,
       'syncMonthlyPlans': syncMonthlyPlans,
       'syncWeeklyPlans': syncWeeklyPlans,
       'syncWeeklyTimetable': syncWeeklyTimetable,
@@ -62,6 +66,7 @@ class CalendarSyncSettings {
   CalendarSyncSettings copyWith({
     String? userId,
     bool? isEnabled,
+    bool? syncDailyPlans,
     bool? syncMonthlyPlans,
     bool? syncWeeklyPlans,
     bool? syncWeeklyTimetable,
@@ -72,6 +77,7 @@ class CalendarSyncSettings {
     return CalendarSyncSettings(
       userId: userId ?? this.userId,
       isEnabled: isEnabled ?? this.isEnabled,
+      syncDailyPlans: syncDailyPlans ?? this.syncDailyPlans,
       syncMonthlyPlans: syncMonthlyPlans ?? this.syncMonthlyPlans,
       syncWeeklyPlans: syncWeeklyPlans ?? this.syncWeeklyPlans,
       syncWeeklyTimetable: syncWeeklyTimetable ?? this.syncWeeklyTimetable,

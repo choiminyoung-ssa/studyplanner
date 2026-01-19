@@ -20,6 +20,7 @@ class DailyPlan {
   final String? parentWeeklyId; // 연결된 주간 계획 ID
   final List<String> sessionIds; // 연결된 학습 세션 ID 목록
   final int totalStudiedSeconds; // 총 학습 시간 (초)
+  final String? googleEventId; // Google Calendar 이벤트 ID
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -42,6 +43,7 @@ class DailyPlan {
     this.parentWeeklyId,
     this.sessionIds = const [],
     this.totalStudiedSeconds = 0,
+    this.googleEventId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -76,6 +78,7 @@ class DailyPlan {
       parentWeeklyId: data['parentWeeklyId'],
       sessionIds: List<String>.from(data['sessionIds'] ?? []),
       totalStudiedSeconds: data['totalStudiedSeconds'] ?? 0,
+      googleEventId: data['googleEventId'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -100,6 +103,7 @@ class DailyPlan {
       'parentWeeklyId': parentWeeklyId,
       'sessionIds': sessionIds,
       'totalStudiedSeconds': totalStudiedSeconds,
+      'googleEventId': googleEventId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -124,6 +128,7 @@ class DailyPlan {
     String? parentWeeklyId,
     List<String>? sessionIds,
     int? totalStudiedSeconds,
+    String? googleEventId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -146,6 +151,7 @@ class DailyPlan {
       parentWeeklyId: parentWeeklyId ?? this.parentWeeklyId,
       sessionIds: sessionIds ?? this.sessionIds,
       totalStudiedSeconds: totalStudiedSeconds ?? this.totalStudiedSeconds,
+      googleEventId: googleEventId ?? this.googleEventId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

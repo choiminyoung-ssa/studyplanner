@@ -134,16 +134,164 @@ class MyApp extends StatelessWidget {
   }
 
   ThemeData _buildDarkTheme() {
+    // 다크모드에서 높은 대비를 위한 커스텀 색상
+    const darkBackground = Color(0xFF121212); // 매우 어두운 배경
+    const darkSurface = Color(0xFF1E1E1E); // 카드/서페이스
+    const darkSurfaceVariant = Color(0xFF2C2C2C); // 약간 밝은 서페이스
+
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blue,
-        brightness: Brightness.dark,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.dark(
+        primary: Colors.blue[400]!, // 밝은 파란색 (대비 향상)
+        secondary: Colors.blueAccent[200]!,
+        surface: darkSurface,
+        background: darkBackground,
+        error: Colors.red[400]!,
+        onPrimary: Colors.black, // primary 위의 텍스트는 검정
+        onSecondary: Colors.black,
+        onSurface: Colors.white, // surface 위의 텍스트는 흰색 (높은 대비)
+        onBackground: Colors.white, // background 위의 텍스트는 흰색
+        onError: Colors.black,
+        surfaceVariant: darkSurfaceVariant,
+        outline: Colors.grey[700]!,
       ),
       useMaterial3: true,
-      appBarTheme: const AppBarTheme(
+
+      // 앱바 테마
+      appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
+        backgroundColor: darkSurface,
+        foregroundColor: Colors.white, // 앱바 텍스트/아이콘 흰색
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
+
+      // 카드 테마
+      cardTheme: CardThemeData(
+        color: darkSurface,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey[800]!, width: 1),
+        ),
+      ),
+
+      // 입력 필드 테마
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[700]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[700]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.blue[400]!, width: 2),
+        ),
+        labelStyle: TextStyle(color: Colors.grey[400]),
+        hintStyle: TextStyle(color: Colors.grey[600]),
+      ),
+
+      // 텍스트 테마 - 모든 텍스트 흰색 보장
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(color: Colors.white),
+        displayMedium: TextStyle(color: Colors.white),
+        displaySmall: TextStyle(color: Colors.white),
+        headlineLarge: TextStyle(color: Colors.white),
+        headlineMedium: TextStyle(color: Colors.white),
+        headlineSmall: TextStyle(color: Colors.white),
+        titleLarge: TextStyle(color: Colors.white),
+        titleMedium: TextStyle(color: Colors.white),
+        titleSmall: TextStyle(color: Colors.white),
+        bodyLarge: TextStyle(color: Colors.white),
+        bodyMedium: TextStyle(color: Colors.white),
+        bodySmall: TextStyle(color: Colors.grey),
+        labelLarge: TextStyle(color: Colors.white),
+        labelMedium: TextStyle(color: Colors.white),
+        labelSmall: TextStyle(color: Colors.grey),
+      ),
+
+      // 리스트 타일 테마
+      listTileTheme: ListTileThemeData(
+        textColor: Colors.white,
+        iconColor: Colors.white,
+        tileColor: darkSurface,
+      ),
+
+      // 다이얼로그 테마
+      dialogTheme: DialogThemeData(
+        backgroundColor: darkSurface,
+        titleTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+        ),
+      ),
+
+      // 버튼 테마
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue[400],
+          foregroundColor: Colors.black, // 버튼 텍스트 검정 (대비)
+        ),
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.blue[400],
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.grey[700]!),
+        ),
+      ),
+
+      // 스위치 테마
+      switchTheme: SwitchThemeData(
+        thumbColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.blue[400];
+          }
+          return Colors.grey[600];
+        }),
+        trackColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.blue[200];
+          }
+          return Colors.grey[800];
+        }),
+      ),
+
+      // 체크박스 테마
+      checkboxTheme: CheckboxThemeData(
+        fillColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return Colors.blue[400];
+          }
+          return Colors.transparent;
+        }),
+        checkColor: MaterialStateProperty.all(Colors.black),
+      ),
+
+      // Divider 테마
+      dividerTheme: DividerThemeData(
+        color: Colors.grey[800],
+        thickness: 1,
+      ),
+
+      // 스캐폴드 배경
+      scaffoldBackgroundColor: darkBackground,
     );
   }
 }

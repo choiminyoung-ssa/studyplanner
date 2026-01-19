@@ -1,0 +1,21 @@
+# 기존 pubspec.yaml에 다음 의존성을 추가하세요:
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 기존 의존성...
+
+  # 새로 추가할 의존성:
+  sqflite: ^2.3.0          # 로컬 데이터베이스 (일정 저장)
+  path: ^1.8.3             # 경로 관리
+  intl: ^0.19.0            # 날짜/시간 국제화 (한국어 지원)
+  uuid: ^4.0.0             # 고유 ID 생성
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+# pubspec.yaml 파일에서 다음 부분도 확인하세요:
+flutter:
+  uses-material-design: true

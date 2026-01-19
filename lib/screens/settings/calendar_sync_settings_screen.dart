@@ -149,6 +149,16 @@ class _CalendarSyncSettingsScreenState
             ),
             const SizedBox(height: 8),
             CheckboxListTile(
+              title: const Text('Daily Plans'),
+              subtitle: const Text('Sync daily time blocks'),
+              value: settings.syncDailyPlans,
+              onChanged: (value) => _updateSettings(
+                context,
+                syncProvider,
+                settings.copyWith(syncDailyPlans: value),
+              ),
+            ),
+            CheckboxListTile(
               title: const Text('Monthly Plans'),
               subtitle: const Text('Sync monthly goals and schedules'),
               value: settings.syncMonthlyPlans,
@@ -218,7 +228,7 @@ class _CalendarSyncSettingsScreenState
         FilledButton.icon(
           onPressed: syncProvider.isSyncing
               ? null
-              : () => syncProvider.performManualSync(),
+              : () => _handleManualSync(context, syncProvider),
           icon: syncProvider.isSyncing
               ? const SizedBox(
                   width: 16,
@@ -291,7 +301,7 @@ class _CalendarSyncSettingsScreenState
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Successfully connected to Google Calendar'),
+          content: Text('구글 캘린더와 연동되었습니다.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -301,7 +311,7 @@ class _CalendarSyncSettingsScreenState
           content: Text(
             syncProvider.errors.isNotEmpty
                 ? syncProvider.errors.last.message
-                : 'Failed to connect to Google Calendar',
+                : '구글 캘린더 연동에 실패했습니다.',
           ),
           backgroundColor: Colors.red,
         ),
@@ -338,10 +348,37 @@ class _CalendarSyncSettingsScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Disconnected from Google Calendar'),
+          content: Text('구글 캘린더 연동이 해제되었습니다.'),
         ),
       );
     }
+  }
+
+  Future<void> _handleManualSync(
+      BuildContext context, CalendarSyncProvider syncProvider) async {
+    final success = await syncProvider.performManualSync();
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('구글 캘린더와 동기화되었습니다.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      return;
+    }
+
+    final errorMessage = syncProvider.errors.isNotEmpty
+        ? syncProvider.errors.last.message
+        : '동기화에 실패했습니다.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   Future<void> _handleToggleSync(BuildContext context,

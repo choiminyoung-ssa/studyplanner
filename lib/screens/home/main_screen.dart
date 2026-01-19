@@ -21,6 +21,7 @@ import '../settings/calendar_sync_settings_screen.dart';
 import '../../utils/onboarding_storage.dart';
 import '../../widgets/onboarding_overlay.dart';
 import '../../providers/calendar_sync_provider.dart';
+import '../chatbot/ai_chatbot_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -116,6 +117,16 @@ class _MainScreenState extends State<MainScreen> {
                     );
                   },
                 ),
+              IconButton(
+                icon: const Icon(Icons.smart_toy_rounded),
+                tooltip: 'AI 어시스턴트',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AIChatbotScreen()),
+                  );
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.search),
                 tooltip: '검색',

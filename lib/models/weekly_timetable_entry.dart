@@ -8,6 +8,7 @@ class WeeklyTimetableEntry {
   final String endTime; // HH:mm
   final String title;
   final String? location;
+  final String? googleEventId; // Google Calendar 이벤트 ID
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +20,7 @@ class WeeklyTimetableEntry {
     required this.endTime,
     required this.title,
     this.location,
+    this.googleEventId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -33,6 +35,7 @@ class WeeklyTimetableEntry {
       endTime: data['endTime'] ?? '10:00',
       title: data['title'] ?? '',
       location: data['location'],
+      googleEventId: data['googleEventId'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -46,6 +49,7 @@ class WeeklyTimetableEntry {
       'endTime': endTime,
       'title': title,
       'location': location,
+      'googleEventId': googleEventId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -59,6 +63,7 @@ class WeeklyTimetableEntry {
     String? endTime,
     String? title,
     String? location,
+    String? googleEventId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -70,6 +75,7 @@ class WeeklyTimetableEntry {
       endTime: endTime ?? this.endTime,
       title: title ?? this.title,
       location: location ?? this.location,
+      googleEventId: googleEventId ?? this.googleEventId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

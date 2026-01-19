@@ -66,6 +66,9 @@ dependencies:
   shared_preferences: ^2.2.3
   shared_preferences_web: ^2.4.3
 
+  # AI Chatbot (Local - No API Key Required)
+  # Using simple pattern matching instead of cloud AI
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
