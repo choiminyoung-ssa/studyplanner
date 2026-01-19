@@ -10,7 +10,7 @@ class GoogleCalendarService {
 
   // OAuth scopes required for calendar access
   static const List<String> _scopes = [
-    calendar.CalendarApi.calendarEventsScope,
+    calendar.CalendarApi.calendarScope,
   ];
 
   /// Check if user is authenticated with calendar access
@@ -33,12 +33,20 @@ class GoogleCalendarService {
       // ignore: avoid_print
       print('Starting Google Sign-In for Calendar access...');
 
-      final account = await _googleSignIn!.signIn();
+      final account =
+          await _googleSignIn!.signInSilently() ?? await _googleSignIn!.signIn();
 
       if (account == null) {
         // ignore: avoid_print
         print('User cancelled sign-in');
         // User cancelled sign-in
+        return false;
+      }
+
+      final scopesGranted = await _googleSignIn!.requestScopes(_scopes);
+      if (!scopesGranted) {
+        // ignore: avoid_print
+        print('Calendar scopes were not granted');
         return false;
       }
 
@@ -61,6 +69,40 @@ class GoogleCalendarService {
       print('Authentication error: $e');
       // ignore: avoid_print
       print('Error type: ${e.runtimeType}');
+      _handleApiError(e);
+      return false;
+    }
+  }
+
+  /// Ensure authentication state with optional interactive sign-in
+  Future<bool> ensureAuthenticated({bool interactive = true}) async {
+    try {
+      _googleSignIn ??= kIsWeb
+          ? GoogleSignIn(
+              clientId:
+                  '227699159450-d98oul5ujdvuao49k0jqv7s2pmkfappi.apps.googleusercontent.com',
+              scopes: _scopes,
+            )
+          : GoogleSignIn(scopes: _scopes);
+
+      var account = _googleSignIn!.currentUser;
+      account ??= await _googleSignIn!.signInSilently();
+      if (account == null && interactive) {
+        account = await _googleSignIn!.signIn();
+      }
+      if (account == null) return false;
+
+      if (interactive) {
+        final scopesGranted = await _googleSignIn!.requestScopes(_scopes);
+        if (!scopesGranted) return false;
+      }
+
+      final httpClient = await _googleSignIn!.authenticatedClient();
+      if (httpClient == null) return false;
+
+      _calendarApi = calendar.CalendarApi(httpClient);
+      return true;
+    } catch (e) {
       _handleApiError(e);
       return false;
     }
@@ -162,6 +204,8 @@ class GoogleCalendarService {
     DateTime? updatedMin,
     String calendarId = 'primary',
     int maxResults = 250,
+    bool singleEvents = true,
+    bool showDeleted = false,
   }) async {
     if (_calendarApi == null) {
       throw Exception('Not authenticated. Call authenticate() first.');
@@ -169,17 +213,28 @@ class GoogleCalendarService {
 
     return await _withRateLimit(() async {
       try {
-        final events = await _calendarApi!.events.list(
-          calendarId,
-          timeMin: timeMin,
-          timeMax: timeMax,
-          updatedMin: updatedMin,
-          maxResults: maxResults,
-          singleEvents: true,
-          orderBy: 'startTime',
-        );
+        final allEvents = <calendar.Event>[];
+        String? pageToken;
+        final orderBy = singleEvents ? 'startTime' : null;
 
-        return events.items ?? [];
+        do {
+          final events = await _calendarApi!.events.list(
+            calendarId,
+            timeMin: timeMin,
+            timeMax: timeMax,
+            updatedMin: updatedMin,
+            maxResults: maxResults,
+            singleEvents: singleEvents,
+            showDeleted: showDeleted,
+            orderBy: orderBy,
+            pageToken: pageToken,
+          );
+
+          allEvents.addAll(events.items ?? []);
+          pageToken = events.nextPageToken;
+        } while (pageToken != null && pageToken.isNotEmpty);
+
+        return allEvents;
       } catch (e) {
         _handleApiError(e);
         return [];
@@ -250,7 +305,9 @@ class GoogleCalendarService {
     // ignore: avoid_print
     print('Google Calendar API Error: $error');
 
-    if (error.toString().contains('401')) {
+    if (error.toString().contains('insufficient_scope')) {
+      throw Exception('Calendar permission is missing. Please reconnect Google Calendar.');
+    } else if (error.toString().contains('401')) {
       throw Exception('Authentication expired. Please reconnect your Google account.');
     } else if (error.toString().contains('403')) {
       throw Exception('Calendar access denied. Please check permissions.');
@@ -291,15 +348,7 @@ class GoogleCalendarService {
   /// Request additional calendar scopes for existing sign-in
   Future<bool> requestCalendarScopes() async {
     try {
-      // Request additional scopes
-      final account = await _googleSignIn?.signIn();
-      if (account == null) return false;
-
-      final httpClient = await _googleSignIn?.authenticatedClient();
-      if (httpClient == null) return false;
-
-      _calendarApi = calendar.CalendarApi(httpClient);
-      return true;
+      return await ensureAuthenticated(interactive: true);
     } catch (e) {
       _handleApiError(e);
       return false;
