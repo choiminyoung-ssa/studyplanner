@@ -79,20 +79,113 @@ class Subject {
 
 class SubjectIconHelper {
   static const Map<String, IconData> iconMap = {
+    // 일반 도서/학습
     'book': Icons.book,
+    'menu_book': Icons.menu_book,
+    'auto_stories': Icons.auto_stories,
+    'local_library': Icons.local_library,
+    'import_contacts': Icons.import_contacts,
+
+    // 수학 (5개 이상)
     'calculate': Icons.calculate,
+    'functions': Icons.functions,
+    'percent': Icons.percent,
+    'square_foot': Icons.square_foot,
+    'architecture': Icons.architecture,
+    'pie_chart': Icons.pie_chart,
+    'show_chart': Icons.show_chart,
+
+    // 과학 (6개 이상)
     'science': Icons.science,
-    'language': Icons.translate,
-    'computer': Icons.computer,
-    'psychology': Icons.psychology,
-    'balance': Icons.balance,
     'biotech': Icons.biotech,
+    'science_outlined': Icons.science_outlined,
+    'bug_report': Icons.bug_report,
+    'coronavirus': Icons.coronavirus,
+    'eco': Icons.eco,
+    'local_florist': Icons.local_florist,
+    'water_drop': Icons.water_drop,
+    'opacity': Icons.opacity,
+    'bubble_chart': Icons.bubble_chart,
+
+    // 국어 (2개 이상)
+    'article': Icons.article,
+    'edit_note': Icons.edit_note,
+    'border_color': Icons.border_color,
+
+    // 영어 (2개 이상)
+    'translate': Icons.translate,
+    'g_translate': Icons.g_translate,
+    'language': Icons.language,
+    'spellcheck': Icons.spellcheck,
+
+    // 사회/역사
     'public': Icons.public,
     'history_edu': Icons.history_edu,
+    'account_balance': Icons.account_balance,
+    'gavel': Icons.gavel,
+    'museum': Icons.museum,
+    'location_city': Icons.location_city,
+    'map': Icons.map,
+    'terrain': Icons.terrain,
+
+    // 컴퓨터/IT
+    'computer': Icons.computer,
+    'code': Icons.code,
+    'terminal': Icons.terminal,
+    'devices': Icons.devices,
+    'memory': Icons.memory,
+    'developer_board': Icons.developer_board,
+    'phone_android': Icons.phone_android,
+
+    // 음악
     'music_note': Icons.music_note,
+    'piano': Icons.piano,
+    'audiotrack': Icons.audiotrack,
+    'headphones': Icons.headphones,
+    'mic': Icons.mic,
+
+    // 미술
     'palette': Icons.palette,
+    'brush': Icons.brush,
+    'color_lens': Icons.color_lens,
+    'draw': Icons.draw,
+    'photo_camera': Icons.photo_camera,
+    'image': Icons.image,
+
+    // 체육/운동
     'sports_soccer': Icons.sports_soccer,
     'fitness_center': Icons.fitness_center,
+    'sports_basketball': Icons.sports_basketball,
+    'pool': Icons.pool,
+    'sports_tennis': Icons.sports_tennis,
+    'sports_baseball': Icons.sports_baseball,
+    'directions_run': Icons.directions_run,
+    'self_improvement': Icons.self_improvement,
+
+    // 심리/철학
+    'psychology': Icons.psychology,
+    'light_mode': Icons.light_mode,
+    'favorite': Icons.favorite,
+    'emoji_objects': Icons.emoji_objects,
+
+    // 법/정치
+    'balance': Icons.balance,
+    'policy': Icons.policy,
+    'how_to_vote': Icons.how_to_vote,
+
+    // 경제/경영
+    'attach_money': Icons.attach_money,
+    'trending_up': Icons.trending_up,
+    'business': Icons.business,
+    'store': Icons.store,
+
+    // 기타
+    'school': Icons.school,
+    'workspace_premium': Icons.workspace_premium,
+    'star': Icons.star,
+    'work': Icons.work,
+    'widgets': Icons.widgets,
+    'extension': Icons.extension,
   };
 
   static IconData getIcon(String iconName) {
