@@ -3,6 +3,160 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences';
 import '../services/auth_service.dart';
 
+/// 오프라인 모드를 위한 Mock User 클래스
+class MockUser implements User {
+  @override
+  final String uid;
+  @override
+  final String? email;
+  @override
+  final String? displayName;
+  @override
+  final String? photoURL;
+  @override
+  final bool isAnonymous;
+  @override
+  final bool isEmailVerified;
+
+  @override
+  String? get refreshToken => null;
+  @override
+  final List<UserInfo> providerData;
+  @override
+  final UserMetadata metadata;
+  @override
+  final String? phoneNumber;
+  @override
+  final String? tenantId;
+  @override
+  final MultiFactor multiFactor;
+
+  MockUser({
+    required this.uid,
+    this.email,
+    this.displayName,
+    this.photoURL,
+    this.isAnonymous = false,
+    this.isEmailVerified = false,
+    this.providerData = const [],
+    this.metadata = const UserMetadata(),
+    this.phoneNumber,
+    this.tenantId,
+    this.multiFactor = const MultiFactor(),
+  });
+
+  @override
+  bool get emailVerified => isEmailVerified;
+
+  @override
+  Future<void> delete() async {}
+
+  @override
+  Future<String> getIdToken([bool? forceRefresh]) async => '';
+
+  @override
+  Future<IdTokenResult> getIdTokenResult([bool? forceRefresh]) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> linkWithCredential(AuthCredential credential) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ConfirmationResult> linkWithPhoneNumber(
+    String phoneNumber, [
+    RecaptchaVerifier? recaptchaVerifier,
+  ]) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> linkWithProvider(AuthProvider provider) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> linkWithPopup(AuthProvider provider) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> linkWithRedirect(AuthProvider provider) async {}
+
+  @override
+  Future<UserCredential> reauthenticateWithCredential(
+      AuthCredential credential) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> reauthenticateWithProvider(
+      AuthProvider provider) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserCredential> reauthenticateWithPopup(AuthProvider provider) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> reauthenticateWithRedirect(AuthProvider provider) async {}
+
+  @override
+  Future<void> reload() async {}
+
+  @override
+  Future<bool> reauthenticateWithCustomToken(String token) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> sendEmailVerification(
+      [ActionCodeSettings? actionCodeSettings]) async {}
+
+  @override
+  Future<User> unlink(String providerId) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> updateEmail(String newEmail) async {}
+
+  @override
+  Future<void> updatePassword(String newPassword) async {}
+
+  @override
+  Future<void> updatePhoneNumber(PhoneAuthCredential credential) async {}
+
+  @override
+  Future<void> updatePhoneNumberCredential(
+      PhoneAuthCredential credential) async {}
+
+  @override
+  Future<void> updateDisplayName(String? displayName) async {}
+
+  @override
+  Future<void> updatePhotoURL(String? photoURL) async {}
+
+  @override
+  Future<void> updateProfile({
+    String? displayName,
+    String? photoURL,
+  }) async {}
+
+  @override
+  Future<void> verifyBeforeUpdateEmail(
+    String newEmail, [
+    ActionCodeSettings? actionCodeSettings,
+  ]) async {}
+
+  @override
+  Stream<User?> get userChanges => Stream.empty();
+}
+
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -33,23 +187,11 @@ class AuthProvider with ChangeNotifier {
 
       if (savedUserId != null) {
         // 오프라인 모드: 저장된 정보로 사용자 객체 생성
-        _user = User(
+        _user = MockUser(
           uid: savedUserId,
           email: savedEmail,
           displayName: savedDisplayName,
           photoURL: savedPhotoUrl,
-          isAnonymous: false,
-          isEmailVerified: false,
-          providerData: [],
-          metadata: UserMetadata(
-            creationTime: null,
-            lastSignInTime: null,
-          ),
-          phoneNumber: null,
-          tenantId: null,
-          multiFactor: MultiFactor(
-            enrolledFactors: [],
-          ),
         );
         _isInitialized = true;
         notifyListeners();
@@ -76,6 +218,15 @@ class AuthProvider with ChangeNotifier {
 
     try {
       await _authService.signUp(email: email, password: password);
+      // 회원가입 성공 시 SharedPreferences에 사용자 정보 저장
+      final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await prefs.setString('user_id', user.uid);
+        await prefs.setString('user_email', user.email ?? '');
+        await prefs.setString('user_display_name', user.displayName ?? '');
+        await prefs.setString('user_photo_url', user.photoURL ?? '');
+      }
       _isLoading = false;
       notifyListeners();
       return true;
@@ -99,6 +250,17 @@ class AuthProvider with ChangeNotifier {
       } else {
         await _authService.signIn(email: email, password: password);
       }
+      
+      // 로그인 성공 시 SharedPreferences에 사용자 정보 저장
+      final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await prefs.setString('user_id', user.uid);
+        await prefs.setString('user_email', user.email ?? '');
+        await prefs.setString('user_display_name', user.displayName ?? '');
+        await prefs.setString('user_photo_url', user.photoURL ?? '');
+      }
+      
       _isLoading = false;
       notifyListeners();
       return true;
@@ -118,6 +280,14 @@ class AuthProvider with ChangeNotifier {
     try {
       await _authService.signOut();
       _user = null;
+      
+      // 로그아웃 시 SharedPreferences에서 사용자 정보 삭제
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_id');
+      await prefs.remove('user_email');
+      await prefs.remove('user_display_name');
+      await prefs.remove('user_photo_url');
+      
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -135,6 +305,17 @@ class AuthProvider with ChangeNotifier {
 
     try {
       await _authService.signInWithGoogle();
+      
+      // Google 로그인 성공 시 SharedPreferences에 사용자 정보 저장
+      final prefs = await SharedPreferences.getInstance();
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await prefs.setString('user_id', user.uid);
+        await prefs.setString('user_email', user.email ?? '');
+        await prefs.setString('user_display_name', user.displayName ?? '');
+        await prefs.setString('user_photo_url', user.photoURL ?? '');
+      }
+      
       _isLoading = false;
       notifyListeners();
       return true;
