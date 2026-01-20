@@ -332,4 +332,32 @@ class AuthProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  // 인터넷 연결 시 Firebase와 동기화
+  Future<void> syncWithFirebase() async {
+    if (_user is MockUser) {
+      try {
+        // 인터넷 연결 확인 후 Firebase와 동기화 시도
+        final prefs = await SharedPreferences.getInstance();
+        final savedUserId = prefs.getString('user_id');
+        
+        if (savedUserId != null) {
+          // Firebase 인증 상태 확인
+          final firebaseUser = FirebaseAuth.instance.currentUser;
+          if (firebaseUser != null && firebaseUser.uid == savedUserId) {
+            // Firebase와 일치하는 사용자 확인 - 온라인 모드로 전환
+            _user = firebaseUser;
+            notifyListeners();
+            print('✅ 오프라인 → 온라인 모드 전환 완료');
+          } else {
+            // Firebase에서 사용자 정보를 찾을 수 없음 - 로그아웃 처리
+            await signOut();
+            print('⚠️ Firebase 사용자 정보 불일치 - 로그아웃 처리');
+          }
+        }
+      } catch (e) {
+        print('❌ Firebase 동기화 오류: $e');
+      }
+    }
+  }
 }
