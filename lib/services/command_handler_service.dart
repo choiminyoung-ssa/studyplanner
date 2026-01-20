@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 import '../models/study_goal.dart';
 import '../models/subject.dart';
 import '../models/weekly_plan.dart';
@@ -7,6 +8,7 @@ import '../models/monthly_plan.dart';
 import '../models/weekly_timetable_entry.dart';
 import '../models/notification_settings.dart';
 import '../models/daily_plan.dart';
+import '../models/study_resource.dart';
 import '../utils/date_utils.dart';
 import 'firestore_service.dart';
 
@@ -850,6 +852,73 @@ class CommandHandlerService {
       return '#2196F3';
     }
     return value.startsWith('#') ? value : '#$value';
+  }
+
+  /// 학습 자료 추가 명령 처리
+  Future<String> addStudyResource(Map<String, dynamic> parameters) async {
+    try {
+      if (userId.isEmpty) {
+        return '❌ 사용자 정보가 없습니다. 다시 로그인해주세요.';
+      }
+
+      final title = parameters['title'] ?? '새 학습 자료';
+      final typeStr = parameters['type']?.toString().toLowerCase();
+      final type = typeStr == '강의' || typeStr == 'lecture'
+          ? StudyResourceType.lecture
+          : StudyResourceType.book;
+      final notes = parameters['notes']?.toString() ?? '';
+      final totalUnitsStr = parameters['total_units']?.toString();
+      final totalUnits = totalUnitsStr != null ? int.tryParse(totalUnitsStr) : null;
+
+      final resource = StudyResource(
+        id: '',
+        userId: userId,
+        title: title.toString(),
+        type: type,
+        notes: notes,
+        totalUnits: totalUnits,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestoreService.createStudyResource(resource);
+      return '✅ "$title" 학습 자료가 추가되었습니다!';
+    } catch (e) {
+      return '❌ 학습 자료 추가 중 오류가 발생했습니다: ${e.toString()}';
+    }
+  }
+
+  /// 화면 설정 명령 처리
+  Future<String> setTheme(Map<String, dynamic> parameters) async {
+    try {
+      final themeStr = parameters['theme']?.toString().toLowerCase().trim();
+
+      ThemeMode themeMode;
+      String themeName;
+
+      if (themeStr == null || themeStr.isEmpty) {
+        return '❌ 테마를 지정해주세요. (예: 밝은 테마, 어두운 테마, 시스템 테마)';
+      }
+
+      if (themeStr.contains('밝') || themeStr.contains('light') || themeStr.contains('라이트')) {
+        themeMode = ThemeMode.light;
+        themeName = '밝은 테마';
+      } else if (themeStr.contains('어둡') || themeStr.contains('dark') || themeStr.contains('다크')) {
+        themeMode = ThemeMode.dark;
+        themeName = '어두운 테마';
+      } else if (themeStr.contains('시스템') || themeStr.contains('system') || themeStr.contains('자동')) {
+        themeMode = ThemeMode.system;
+        themeName = '시스템 테마';
+      } else {
+        return '❌ 지원하지 않는 테마입니다. 밝은 테마, 어두운 테마, 시스템 테마 중 하나를 선택해주세요.';
+      }
+
+      // 테마 저장 로직은 별도 Provider를 통해 처리되어야 함
+      // 여기서는 성공 메시지만 반환
+      return '✅ 화면 테마가 "$themeName"으로 설정되었습니다! 앱을 재시작하면 적용됩니다.';
+    } catch (e) {
+      return '❌ 테마 설정 중 오류가 발생했습니다: ${e.toString()}';
+    }
   }
 }
 

@@ -398,6 +398,29 @@ class LocalAIService {
       result['confidence'] = 0.83;
       print('✅ DEBUG: Detected search with confidence 0.83');
     }
+    // 학습 자료 추가
+    else if (_containsAny(lowerMessage, ['학습', '공부', '자료', 'material', 'resource']) &&
+        _containsAny(lowerMessage, ['추가', '등록', '생성', '만들'])) {
+      result['action'] = 'add_study_resource';
+      result['parameters'] = {
+        'title': _extractResourceTitle(message),
+        'type': _extractResourceType(message),
+        'notes': _extractResourceNotes(message),
+        'total_units': _extractTotalUnits(message),
+      };
+      result['confidence'] = 0.85;
+      print('✅ DEBUG: Detected add_study_resource with confidence 0.85');
+    }
+    // 화면 설정 (테마)
+    else if (_containsAny(lowerMessage, ['화면', '테마', 'theme', '설정', '모드']) &&
+        _containsAny(lowerMessage, ['밝', '어둡', '시스템', '다크', '라이트', 'light', 'dark', 'system'])) {
+      result['action'] = 'set_theme';
+      result['parameters'] = {
+        'theme': _extractTheme(message),
+      };
+      result['confidence'] = 0.87;
+      print('✅ DEBUG: Detected set_theme with confidence 0.87');
+    }
 
     print(
       '📊 DEBUG: Final result - action: ${result['action']}, confidence: ${result['confidence']}',
@@ -550,5 +573,86 @@ class LocalAIService {
     }
 
     return materials;
+  }
+
+  /// 학습 자료 제목 추출
+  String _extractResourceTitle(String message) {
+    final quoted = _extractQuotedText(message);
+    if (quoted.isNotEmpty) {
+      return quoted;
+    }
+
+    final cleaned = message
+        .replaceAll(
+          RegExp(r'(학습|공부|자료|material|resource|추가|등록|생성|만들어|만들기|해줘)'),
+          '',
+        )
+        .replaceAll(RegExp(r'[:：]'), '')
+        .trim();
+
+    if (cleaned.isEmpty) {
+      return '새 학습 자료';
+    }
+
+    return cleaned.length > 50 ? cleaned.substring(0, 50).trim() : cleaned;
+  }
+
+  /// 학습 자료 타입 추출
+  String _extractResourceType(String message) {
+    final lowerMsg = message.toLowerCase();
+
+    if (lowerMsg.contains('강의') || lowerMsg.contains('lecture') || lowerMsg.contains('온라인')) {
+      return 'lecture';
+    }
+
+    return 'book'; // 기본값
+  }
+
+  /// 학습 자료 노트 추출
+  String _extractResourceNotes(String message) {
+    final lowerMsg = message.toLowerCase();
+
+    if (lowerMsg.contains('노트') || lowerMsg.contains('메모')) {
+      final noteMatch = RegExp(r'(노트|메모|notes?)\s*[:：]?\s*(.+)', caseSensitive: false).firstMatch(message);
+      if (noteMatch != null) {
+        return noteMatch.group(2)?.trim() ?? '';
+      }
+    }
+
+    return '';
+  }
+
+  /// 총 단위 수 추출
+  String? _extractTotalUnits(String message) {
+    final lowerMsg = message.toLowerCase();
+
+    // "총 10강" 형태
+    final totalMatch = RegExp(r'총\s*(\d+)\s*(강|페이지|page)').firstMatch(lowerMsg);
+    if (totalMatch != null) {
+      return totalMatch.group(1);
+    }
+
+    // "10강" 형태
+    final unitMatch = RegExp(r'(\d+)\s*(강|페이지|page)').firstMatch(lowerMsg);
+    if (unitMatch != null) {
+      return unitMatch.group(1);
+    }
+
+    return null;
+  }
+
+  /// 테마 추출
+  String _extractTheme(String message) {
+    final lowerMsg = message.toLowerCase();
+
+    if (lowerMsg.contains('밝') || lowerMsg.contains('light') || lowerMsg.contains('라이트')) {
+      return 'light';
+    } else if (lowerMsg.contains('어둡') || lowerMsg.contains('dark') || lowerMsg.contains('다크')) {
+      return 'dark';
+    } else if (lowerMsg.contains('시스템') || lowerMsg.contains('system') || lowerMsg.contains('자동')) {
+      return 'system';
+    }
+
+    return 'system'; // 기본값
   }
 }
