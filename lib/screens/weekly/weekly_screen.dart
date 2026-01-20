@@ -49,7 +49,7 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
         child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             FadeSliverHeader(
-              maxHeight: 120,
+              maxHeight: 140,
               child: _buildHeader(weekStart, weekEnd, colorScheme),
             ),
           ],
@@ -109,7 +109,11 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
     });
   }
 
-  Widget _buildHeader(DateTime weekStart, DateTime weekEnd, ColorScheme colorScheme) {
+  Widget _buildHeader(
+    DateTime weekStart,
+    DateTime weekEnd,
+    ColorScheme colorScheme,
+  ) {
     final textColor = colorScheme.onPrimaryContainer;
 
     return Container(
@@ -140,8 +144,14 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: colorScheme.surface,
                   foregroundColor: textColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
                 ),
                 icon: const Icon(Icons.today, size: 16),
                 label: const Text('이번 주'),
@@ -160,7 +170,10 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: colorScheme.surface.withAlpha(230),
                     borderRadius: BorderRadius.circular(16),
@@ -169,12 +182,19 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                     children: [
                       Text(
                         '${DateHelper.toMonthString(weekStart)} 주간',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${_formatShortDate(weekStart)} ~ ${_formatShortDate(weekEnd)}',
-                        style: TextStyle(fontSize: 10, color: textColor.withAlpha(180)),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: textColor.withAlpha(180),
+                        ),
                       ),
                     ],
                   ),
@@ -275,7 +295,9 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 14),
       itemBuilder: (context, index) {
         final date = weekDates[index];
-        final dayPlans = allPlans.where((plan) => DateHelper.isSameDay(plan.date, date)).toList();
+        final dayPlans = allPlans
+            .where((plan) => DateHelper.isSameDay(plan.date, date))
+            .toList();
         final isToday = DateHelper.isToday(date);
 
         return _buildDayCard(
@@ -308,13 +330,17 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(weekDates.length, (index) {
           final date = weekDates[index];
-          final dayPlans = allPlans.where((plan) => DateHelper.isSameDay(plan.date, date)).toList();
+          final dayPlans = allPlans
+              .where((plan) => DateHelper.isSameDay(plan.date, date))
+              .toList();
           final isToday = DateHelper.isToday(date);
 
           return SizedBox(
             width: dayCardWidth,
             child: Padding(
-              padding: EdgeInsets.only(right: index == weekDates.length - 1 ? 0 : cardSpacing),
+              padding: EdgeInsets.only(
+                right: index == weekDates.length - 1 ? 0 : cardSpacing,
+              ),
               child: _buildDayCard(
                 date: date,
                 isToday: isToday,
@@ -357,11 +383,7 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildDayHeader(
-            date: date,
-            isToday: isToday,
-            compact: compact,
-          ),
+          _buildDayHeader(date: date, isToday: isToday, compact: compact),
           const SizedBox(height: 12),
           if (plans.isEmpty)
             _buildEmptyDayPlaceholder(
@@ -394,7 +416,9 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
     final dayLabel = DateHelper.getWeekdayName(date);
     final colorScheme = Theme.of(context).colorScheme;
     final accent = colorScheme.primary;
-    final headerColor = isToday ? accent.withAlpha(28) : colorScheme.surfaceContainerHighest;
+    final headerColor = isToday
+        ? accent.withAlpha(28)
+        : colorScheme.surfaceContainerHighest;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -402,7 +426,9 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
         color: headerColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isToday ? accent.withAlpha(120) : colorScheme.outlineVariant.withAlpha(120),
+          color: isToday
+              ? accent.withAlpha(120)
+              : colorScheme.outlineVariant.withAlpha(120),
         ),
       ),
       child: Row(
@@ -470,11 +496,18 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
         ),
         child: Column(
           children: [
-            Icon(Icons.add_circle_outline, color: Colors.grey[500], size: compact ? 22 : 26),
+            Icon(
+              Icons.add_circle_outline,
+              color: Colors.grey[500],
+              size: compact ? 22 : 26,
+            ),
             const SizedBox(height: 6),
             Text(
               '일정을 추가해보세요',
-              style: TextStyle(color: Colors.grey[600], fontSize: compact ? 12 : 13),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: compact ? 12 : 13,
+              ),
             ),
             const SizedBox(height: 8),
             Container(
@@ -485,7 +518,10 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
               ),
               child: Text(
                 '예시: 수학 문제집 2챕터',
-                style: TextStyle(fontSize: compact ? 10 : 11, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: compact ? 10 : 11,
+                  color: Colors.grey[600],
+                ),
               ),
             ),
           ],
@@ -531,7 +567,8 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
     Subject? subject,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    final subjectName = subject?.name ?? (plan.subject.isNotEmpty ? plan.subject : null);
+    final subjectName =
+        subject?.name ?? (plan.subject.isNotEmpty ? plan.subject : null);
     final subjectColor = subject != null
         ? Color(int.parse(subject.color.replaceFirst('#', '0xFF')))
         : colorScheme.primary;
@@ -555,7 +592,9 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: plan.isCompleted ? const Color(0xFFEAF7EE) : colorScheme.surface,
+            color: plan.isCompleted
+                ? const Color(0xFFEAF7EE)
+                : colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: plan.isCompleted
@@ -593,7 +632,9 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.3,
-                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                        decoration: plan.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -652,13 +693,10 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
 
   Future<void> _togglePlanComplete(WeeklyPlan plan) async {
     final next = !plan.isCompleted;
-    await _firestoreService.updateWeeklyPlan(
-      plan.id,
-      {
-        'isCompleted': next,
-        'completedAt': next ? DateTime.now() : null,
-      },
-    );
+    await _firestoreService.updateWeeklyPlan(plan.id, {
+      'isCompleted': next,
+      'completedAt': next ? DateTime.now() : null,
+    });
   }
 
   // 상세 정보 다이얼로그 표시
@@ -697,7 +735,9 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
               if (plan.parentMonthlyId != null) ...[
                 const SizedBox(height: 12),
                 FutureBuilder<MonthlyPlan?>(
-                  future: _firestoreService.getParentMonthlyPlan(plan.parentMonthlyId!),
+                  future: _firestoreService.getParentMonthlyPlan(
+                    plan.parentMonthlyId!,
+                  ),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData || snapshot.data == null) {
                       return const SizedBox.shrink();
@@ -724,11 +764,15 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
               // 과목
               if (plan.subjectId != null)
                 StreamBuilder<Subject?>(
-                  stream: _firestoreService.getSubjectById(plan.subjectId!).asStream(),
+                  stream: _firestoreService
+                      .getSubjectById(plan.subjectId!)
+                      .asStream(),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data != null) {
                       final subject = snapshot.data!;
-                      final color = Color(int.parse(subject.color.replaceFirst('#', '0xFF')));
+                      final color = Color(
+                        int.parse(subject.color.replaceFirst('#', '0xFF')),
+                      );
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
@@ -766,11 +810,22 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                       child: Wrap(
                         spacing: 6,
                         runSpacing: 6,
-                        children: plan.pageRanges.map((range) => Chip(
-                          label: Text('p.$range', style: const TextStyle(fontSize: 12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        )).toList(),
+                        children: plan.pageRanges
+                            .map(
+                              (range) => Chip(
+                                label: Text(
+                                  'p.$range',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 0,
+                                ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ],
@@ -795,7 +850,6 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-
             ],
           ),
         ),
@@ -856,8 +910,12 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
               try {
-                if (plan.parentMonthlyId != null && plan.parentMonthlyId!.isNotEmpty) {
-                  await _firestoreService.removeWeeklyIdFromMonthly(plan.parentMonthlyId!, plan.id);
+                if (plan.parentMonthlyId != null &&
+                    plan.parentMonthlyId!.isNotEmpty) {
+                  await _firestoreService.removeWeeklyIdFromMonthly(
+                    plan.parentMonthlyId!,
+                    plan.id,
+                  );
                 }
                 await _firestoreService.deleteWeeklyPlan(plan.id);
                 if (!mounted) return;
@@ -866,7 +924,10 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showSnackBar(
-                  SnackBar(content: Text('삭제 실패: $e'), backgroundColor: Colors.red),
+                  SnackBar(
+                    content: Text('삭제 실패: $e'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
@@ -1004,10 +1065,7 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
 
     try {
       // Firestore에서 날짜 업데이트
-      await _firestoreService.updateWeeklyPlan(
-        plan.id,
-        {'date': tomorrow},
-      );
+      await _firestoreService.updateWeeklyPlan(plan.id, {'date': tomorrow});
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

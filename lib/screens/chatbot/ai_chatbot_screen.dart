@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/unified_ai_service.dart';
 import '../../services/command_handler_service.dart';
 import '../../utils/date_utils.dart';
@@ -19,7 +20,8 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
 
-  late UnifiedAIService _aiService;
+  late Future<UnifiedAIService> _aiServiceFuture;
+  UnifiedAIService? _aiService;
   late CommandHandlerService _commandHandler;
   bool _isLoading = false;
 
@@ -30,7 +32,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   }
 
   void _initializeServices() {
-    _aiService = UnifiedAIService();
+    _aiServiceFuture = UnifiedAIService.create();
     final userId = context.read<AuthProvider>().user?.uid ?? '';
     _commandHandler = CommandHandlerService(userId: userId);
 
@@ -45,6 +47,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
             '• 주간/월간 계획 추가\n'
             '• 학습 목표 설정\n'
             '• 과목 추가\n'
+            '• 학습 자료 추가\n'
+            '• 화면 설정\n'
+            '• 할일 보관함 추가\n'
             '• 학습 통계 확인\n'
             '• 할일 관리\n'
             '• 검색\n'
@@ -64,7 +69,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
+    if (_messageController.text.trim().isEmpty || _aiService == null) return;
 
     final userMessage = _messageController.text.trim();
     _messageController.clear();
@@ -79,11 +84,11 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     _scrollToBottom();
 
     try {
-      // 1. 로컬 AI에게 메시지 전송
-      final aiResponse = await _aiService.processMessage(userMessage);
+      // 1. AI에게 메시지 전송
+      final aiResponse = await _aiService!.processMessage(userMessage);
 
       // 2. 명령어 감지 및 처리
-      final intent = await _aiService.parseUserIntent(userMessage);
+      final intent = await _aiService!.parseUserIntent(userMessage);
       String finalResponse = aiResponse;
 
       // 더 낮은 신뢰도의 명령어도 실행 (0.6 이상)
@@ -163,6 +168,21 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 intent['parameters'],
               );
               print('✅ DEBUG: Monthly plan set: $commandResult');
+              break;
+            case 'add_study_resource':
+              print('📎 DEBUG: Adding study resource...');
+              commandResult = await _commandHandler.addStudyResource(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Study resource added: $commandResult');
+              break;
+            case 'set_theme':
+              print('🎨 DEBUG: Setting theme...');
+              commandResult = await _commandHandler.setTheme(
+                intent['parameters'],
+                onThemeChanged: context.read<ThemeProvider>().updateThemeMode,
+              );
+              print('✅ DEBUG: Theme set: $commandResult');
               break;
             case 'set_timetable':
               print('🧭 DEBUG: Setting timetable...');
@@ -422,6 +442,69 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<UnifiedAIService>(
+      future: _aiServiceFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('AI 어시스턴트'),
+            ),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('AI 서비스를 초기화하는 중...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('AI 어시스턴트'),
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  const Text('AI 서비스 초기화에 실패했습니다.'),
+                  const SizedBox(height: 8),
+                  Text('오류: ${snapshot.error}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _aiServiceFuture = UnifiedAIService.create();
+                      });
+                    },
+                    child: const Text('다시 시도'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasData) {
+          _aiService = snapshot.data!;
+          return _buildChatUI();
+        }
+
+        return const Scaffold(
+          body: Center(child: Text('알 수 없는 오류가 발생했습니다.')),
+        );
+      },
+    );
+  }
+
+  Widget _buildChatUI() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -449,7 +532,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '${_aiService.currentAIIcon} ${_aiService.currentAIName}',
+                  '${_aiService!.currentAIIcon} ${_aiService!.currentAIName}',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.normal,
@@ -467,13 +550,13 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AISettingsScreen(aiService: _aiService),
+                  builder: (context) => AISettingsScreen(aiService: _aiService!),
                 ),
               );
               // 설정이 변경되었으면 화면 새로고침
               if (result == true) {
                 setState(() {
-                  _aiService.resetChat();
+                  _aiService!.resetChat();
                 });
               }
             },
@@ -493,6 +576,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
               setState(() {
                 _messages.clear();
                 _initializeServices();
+                _aiServiceFuture = UnifiedAIService.create();
               });
             },
           ),
@@ -524,7 +608,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _aiService.currentBannerMessage,
+                    _aiService!.currentBannerMessage,
                     style: TextStyle(
                       fontSize: 13,
                       color: isDark ? Colors.blue[100] : Colors.blue[900],

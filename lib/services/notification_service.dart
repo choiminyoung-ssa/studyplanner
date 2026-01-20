@@ -8,22 +8,95 @@ import '../models/daily_plan.dart';
 import '../services/firestore_service.dart';
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   final FirestoreService _firestoreService;
 
   NotificationService(this._firestoreService);
+
+  Future<AndroidScheduleMode> _resolveAndroidScheduleMode() async {
+    if (kIsWeb) return AndroidScheduleMode.inexactAllowWhileIdle;
+    final androidImpl = _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (androidImpl == null) {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
+    }
+
+    try {
+      final canScheduleExact = await androidImpl
+          .canScheduleExactNotifications();
+      if (canScheduleExact == true) {
+        return AndroidScheduleMode.exactAllowWhileIdle;
+      }
+    } catch (e) {
+      debugPrint('Exact alarm check failed: $e');
+    }
+
+    return AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
+  Future<void> _safeZonedSchedule({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduledDate,
+    required NotificationDetails details,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    if (kIsWeb) return;
+    final scheduleMode = await _resolveAndroidScheduleMode();
+
+    Future<void> attempt(AndroidScheduleMode mode) async {
+      await _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledDate,
+        details,
+        payload: payload,
+        androidScheduleMode: mode,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
+      );
+    }
+
+    try {
+      await attempt(scheduleMode);
+    } catch (e) {
+      debugPrint('Notification schedule failed ($scheduleMode): $e');
+      if (scheduleMode == AndroidScheduleMode.exactAllowWhileIdle) {
+        try {
+          await attempt(AndroidScheduleMode.inexactAllowWhileIdle);
+        } catch (fallbackError) {
+          debugPrint('Notification schedule fallback failed: $fallbackError');
+        }
+      }
+    }
+  }
 
   Future<void> initialize() async {
     if (kIsWeb) return;
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.local);
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings();
-    const settings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+    const settings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
     await _notifications.initialize(settings);
 
-    final androidImpl = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidImpl = _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidImpl?.createNotificationChannel(
       const AndroidNotificationChannel(
         'plan_reminder',
@@ -68,7 +141,8 @@ class NotificationService {
     try {
       final iosImpl = _notifications.resolvePlatformSpecificImplementation();
       if (iosImpl != null) {
-        iosGranted = await (iosImpl as dynamic).requestPermissions(
+        iosGranted =
+            await (iosImpl as dynamic).requestPermissions(
               alert: true,
               badge: true,
               sound: true,
@@ -82,7 +156,11 @@ class NotificationService {
     return androidGranted && iosGranted;
   }
 
-  DateTime _calculateReminderTime(DateTime date, String startTime, int minutesBefore) {
+  DateTime _calculateReminderTime(
+    DateTime date,
+    String startTime,
+    int minutesBefore,
+  ) {
     final parts = startTime.split(':');
     final hour = int.parse(parts[0]);
     final minute = int.parse(parts[1]);
@@ -92,7 +170,14 @@ class NotificationService {
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var scheduled = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
@@ -101,7 +186,11 @@ class NotificationService {
 
   Future<void> schedulePlanReminder(DailyPlan plan, int minutesBefore) async {
     if (kIsWeb) return;
-    final scheduledTime = _calculateReminderTime(plan.date, plan.startTime, minutesBefore);
+    final scheduledTime = _calculateReminderTime(
+      plan.date,
+      plan.startTime,
+      minutesBefore,
+    );
     if (scheduledTime.isBefore(DateTime.now())) return;
 
     final notificationId = plan.id.hashCode;
@@ -111,12 +200,12 @@ class NotificationService {
       'date': plan.date.toIso8601String(),
     });
 
-    await _notifications.zonedSchedule(
-      notificationId,
-      '${plan.title} 곧 시작해요',
-      '$minutesBefore분 후 시작 • ${plan.startTime} ~ ${plan.endTime}',
-      tz.TZDateTime.from(scheduledTime, tz.local),
-      const NotificationDetails(
+    await _safeZonedSchedule(
+      id: notificationId,
+      title: '${plan.title} 곧 시작해요',
+      body: '$minutesBefore분 후 시작 • ${plan.startTime} ~ ${plan.endTime}',
+      scheduledDate: tz.TZDateTime.from(scheduledTime, tz.local),
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           'plan_reminder',
           '일정 알림',
@@ -128,16 +217,21 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
       payload: payload,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
-  Future<void> rescheduleAllPlanReminders(String userId, int minutesBefore) async {
+  Future<void> rescheduleAllPlanReminders(
+    String userId,
+    int minutesBefore,
+  ) async {
     if (kIsWeb) return;
     final now = DateTime.now();
     final rangeEnd = now.add(const Duration(days: 30));
-    final plans = await _firestoreService.getDailyPlansByDateRange(userId, now, rangeEnd);
+    final plans = await _firestoreService.getDailyPlansByDateRange(
+      userId,
+      now,
+      rangeEnd,
+    );
 
     for (final plan in plans) {
       await cancelPlanReminder(plan.id);
@@ -158,12 +252,12 @@ class NotificationService {
     );
     final count = todayPlans.length;
 
-    await _notifications.zonedSchedule(
-      999999,
-      '오늘의 학습 일정',
-      count > 0 ? '오늘 일정 $count개가 있어요. 하루를 시작해볼까요?' : '오늘은 가볍게 시작해볼까요?',
-      _nextInstanceOfTime(hour, minute),
-      const NotificationDetails(
+    await _safeZonedSchedule(
+      id: 999999,
+      title: '오늘의 학습 일정',
+      body: count > 0 ? '오늘 일정 $count개가 있어요. 하루를 시작해볼까요?' : '오늘은 가볍게 시작해볼까요?',
+      scheduledDate: _nextInstanceOfTime(hour, minute),
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_summary',
           '일일 요약',
@@ -173,8 +267,6 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -195,12 +287,12 @@ class NotificationService {
         ? '미완료 일정 $remaining개가 있어요. 오늘을 마무리해볼까요?'
         : '오늘 일정 완료! 내일 준비도 가볍게 해볼까요?';
 
-    await _notifications.zonedSchedule(
-      999998,
-      '오늘의 마무리 리마인더',
-      body,
-      _nextInstanceOfTime(hour, minute),
-      const NotificationDetails(
+    await _safeZonedSchedule(
+      id: 999998,
+      title: '오늘의 마무리 리마인더',
+      body: body,
+      scheduledDate: _nextInstanceOfTime(hour, minute),
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           'evening_review',
           '저녁 리마인더',
@@ -210,8 +302,6 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

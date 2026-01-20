@@ -868,7 +868,9 @@ class CommandHandlerService {
           : StudyResourceType.book;
       final notes = parameters['notes']?.toString() ?? '';
       final totalUnitsStr = parameters['total_units']?.toString();
-      final totalUnits = totalUnitsStr != null ? int.tryParse(totalUnitsStr) : null;
+      final totalUnits = totalUnitsStr != null
+          ? int.tryParse(totalUnitsStr)
+          : null;
 
       final resource = StudyResource(
         id: '',
@@ -889,7 +891,10 @@ class CommandHandlerService {
   }
 
   /// 화면 설정 명령 처리
-  Future<String> setTheme(Map<String, dynamic> parameters) async {
+  Future<String> setTheme(
+    Map<String, dynamic> parameters, {
+    Future<void> Function(ThemeMode mode)? onThemeChanged,
+  }) async {
     try {
       final themeStr = parameters['theme']?.toString().toLowerCase().trim();
 
@@ -900,22 +905,31 @@ class CommandHandlerService {
         return '❌ 테마를 지정해주세요. (예: 밝은 테마, 어두운 테마, 시스템 테마)';
       }
 
-      if (themeStr.contains('밝') || themeStr.contains('light') || themeStr.contains('라이트')) {
+      if (themeStr.contains('밝') ||
+          themeStr.contains('light') ||
+          themeStr.contains('라이트')) {
         themeMode = ThemeMode.light;
         themeName = '밝은 테마';
-      } else if (themeStr.contains('어둡') || themeStr.contains('dark') || themeStr.contains('다크')) {
+      } else if (themeStr.contains('어둡') ||
+          themeStr.contains('dark') ||
+          themeStr.contains('다크')) {
         themeMode = ThemeMode.dark;
         themeName = '어두운 테마';
-      } else if (themeStr.contains('시스템') || themeStr.contains('system') || themeStr.contains('자동')) {
+      } else if (themeStr.contains('시스템') ||
+          themeStr.contains('system') ||
+          themeStr.contains('자동')) {
         themeMode = ThemeMode.system;
         themeName = '시스템 테마';
       } else {
         return '❌ 지원하지 않는 테마입니다. 밝은 테마, 어두운 테마, 시스템 테마 중 하나를 선택해주세요.';
       }
 
-      // 테마 저장 로직은 별도 Provider를 통해 처리되어야 함
-      // 여기서는 성공 메시지만 반환
-      return '✅ 화면 테마가 "$themeName"으로 설정되었습니다! 앱을 재시작하면 적용됩니다.';
+      if (onThemeChanged != null) {
+        await onThemeChanged(themeMode);
+        return '✅ 화면 테마가 "$themeName"으로 설정되었습니다!';
+      }
+
+      return '✅ 화면 테마가 "$themeName"으로 설정되었습니다! 설정 화면에서 확인해주세요.';
     } catch (e) {
       return '❌ 테마 설정 중 오류가 발생했습니다: ${e.toString()}';
     }

@@ -44,6 +44,47 @@ class LocalAIService {
       return '🗓️ 월간 계획을 추가할게요!';
     }
 
+    // 학습 자료 추가
+    if (_containsAny(lowerMessage, [
+          '학습',
+          '공부',
+          '자료',
+          'material',
+          'resource',
+        ]) &&
+        _containsAny(lowerMessage, ['추가', '등록', '생성', '만들'])) {
+      final resourceTitle = _extractResourceTitle(message);
+      return '📎 "$resourceTitle" 학습 자료를 추가할게요!';
+    }
+
+    // 화면 설정 (테마)
+    if (_containsAny(lowerMessage, ['화면', '테마', 'theme', '모드']) &&
+        _containsAny(lowerMessage, [
+          '밝',
+          '어둡',
+          '시스템',
+          '다크',
+          '라이트',
+          'light',
+          'dark',
+          'system',
+        ])) {
+      final theme = _extractTheme(message);
+      final themeLabel = theme == 'light'
+          ? '밝은 테마'
+          : theme == 'dark'
+          ? '어두운 테마'
+          : '시스템 테마';
+      return '🎨 화면 테마를 "$themeLabel"로 설정할게요!';
+    }
+
+    // 할일 보관함 추가
+    if (_containsAny(lowerMessage, ['보관함', 'backlog']) &&
+        _containsAny(lowerMessage, ['추가', '등록', '넣', '저장'])) {
+      final backlogTitle = _extractBacklogTitle(message);
+      return '🗂️ "$backlogTitle"을(를) 할일 보관함에 추가할게요!';
+    }
+
     // 일정 관련
     if (_containsAny(lowerMessage, ['일정', '스케줄', '계획'])) {
       if (_containsAny(lowerMessage, ['추가', '생성', '만들', '등록', '넣'])) {
@@ -220,6 +261,15 @@ class LocalAIService {
         '📚 **과목 관리**\n'
         '• "과목 추가: 화학"\n'
         '• "새 과목 등록: 한국사"\n\n'
+        '📎 **학습 자료 추가**\n'
+        '• "학습 자료 추가: 수학 문제집 1권"\n'
+        '• "강의 자료 등록: 화학 인강 20강"\n\n'
+        '🎨 **화면 설정**\n'
+        '• "화면 테마를 다크로 바꿔줘"\n'
+        '• "라이트 모드로 설정"\n\n'
+        '🗂️ **할일 보관함**\n'
+        '• "할일 보관함에 추가: 영어 단어 암기"\n'
+        '• "보관함에 과제 저장해줘"\n\n'
         '📊 **학습 통계**\n'
         '• "오늘 얼마나 공부했어?"\n'
         '• "이번 주 공부 시간 알려줘"\n\n'
@@ -325,6 +375,17 @@ class LocalAIService {
       result['confidence'] = 0.86;
       print('✅ DEBUG: Detected set_monthly_plan with confidence 0.86');
     }
+    // 할일 보관함 추가
+    else if (_containsAny(lowerMessage, ['보관함', 'backlog']) &&
+        _containsAny(lowerMessage, ['추가', '등록', '넣', '저장'])) {
+      result['action'] = 'add_to_backlog';
+      result['parameters'] = {
+        'subject': _extractBacklogTitle(message),
+        'description': _extractBacklogDescription(message),
+      };
+      result['confidence'] = 0.86;
+      print('✅ DEBUG: Detected add_to_backlog with confidence 0.86');
+    }
     // 일정 생성 (시간과 학습 자료 파라미터 포함)
     else if ((_containsAny(lowerMessage, ['일정', '스케줄', '계획']) &&
             _containsAny(lowerMessage, [
@@ -399,7 +460,13 @@ class LocalAIService {
       print('✅ DEBUG: Detected search with confidence 0.83');
     }
     // 학습 자료 추가
-    else if (_containsAny(lowerMessage, ['학습', '공부', '자료', 'material', 'resource']) &&
+    else if (_containsAny(lowerMessage, [
+          '학습',
+          '공부',
+          '자료',
+          'material',
+          'resource',
+        ]) &&
         _containsAny(lowerMessage, ['추가', '등록', '생성', '만들'])) {
       result['action'] = 'add_study_resource';
       result['parameters'] = {
@@ -413,11 +480,18 @@ class LocalAIService {
     }
     // 화면 설정 (테마)
     else if (_containsAny(lowerMessage, ['화면', '테마', 'theme', '설정', '모드']) &&
-        _containsAny(lowerMessage, ['밝', '어둡', '시스템', '다크', '라이트', 'light', 'dark', 'system'])) {
+        _containsAny(lowerMessage, [
+          '밝',
+          '어둡',
+          '시스템',
+          '다크',
+          '라이트',
+          'light',
+          'dark',
+          'system',
+        ])) {
       result['action'] = 'set_theme';
-      result['parameters'] = {
-        'theme': _extractTheme(message),
-      };
+      result['parameters'] = {'theme': _extractTheme(message)};
       result['confidence'] = 0.87;
       print('✅ DEBUG: Detected set_theme with confidence 0.87');
     }
@@ -601,7 +675,9 @@ class LocalAIService {
   String _extractResourceType(String message) {
     final lowerMsg = message.toLowerCase();
 
-    if (lowerMsg.contains('강의') || lowerMsg.contains('lecture') || lowerMsg.contains('온라인')) {
+    if (lowerMsg.contains('강의') ||
+        lowerMsg.contains('lecture') ||
+        lowerMsg.contains('온라인')) {
       return 'lecture';
     }
 
@@ -613,7 +689,10 @@ class LocalAIService {
     final lowerMsg = message.toLowerCase();
 
     if (lowerMsg.contains('노트') || lowerMsg.contains('메모')) {
-      final noteMatch = RegExp(r'(노트|메모|notes?)\s*[:：]?\s*(.+)', caseSensitive: false).firstMatch(message);
+      final noteMatch = RegExp(
+        r'(노트|메모|notes?)\s*[:：]?\s*(.+)',
+        caseSensitive: false,
+      ).firstMatch(message);
       if (noteMatch != null) {
         return noteMatch.group(2)?.trim() ?? '';
       }
@@ -641,15 +720,56 @@ class LocalAIService {
     return null;
   }
 
+  String _extractBacklogTitle(String message) {
+    final quoted = _extractQuotedText(message);
+    if (quoted.isNotEmpty) {
+      return quoted;
+    }
+
+    final cleaned = message
+        .replaceAll(
+          RegExp(
+            r'(할일|할 일|보관함|백로그|backlog|추가|등록|넣어|넣기|저장|해줘|만들어|만들기)',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .replaceAll(RegExp(r'[:：]'), '')
+        .trim();
+
+    if (cleaned.isEmpty) {
+      return '새 할일';
+    }
+
+    return cleaned.length > 50 ? cleaned.substring(0, 50).trim() : cleaned;
+  }
+
+  String _extractBacklogDescription(String message) {
+    final match = RegExp(
+      r'(설명|메모|노트|detail|description)\s*[:：]?\s*(.+)',
+      caseSensitive: false,
+    ).firstMatch(message);
+    if (match != null) {
+      return match.group(2)?.trim() ?? '';
+    }
+    return '';
+  }
+
   /// 테마 추출
   String _extractTheme(String message) {
     final lowerMsg = message.toLowerCase();
 
-    if (lowerMsg.contains('밝') || lowerMsg.contains('light') || lowerMsg.contains('라이트')) {
+    if (lowerMsg.contains('밝') ||
+        lowerMsg.contains('light') ||
+        lowerMsg.contains('라이트')) {
       return 'light';
-    } else if (lowerMsg.contains('어둡') || lowerMsg.contains('dark') || lowerMsg.contains('다크')) {
+    } else if (lowerMsg.contains('어둡') ||
+        lowerMsg.contains('dark') ||
+        lowerMsg.contains('다크')) {
       return 'dark';
-    } else if (lowerMsg.contains('시스템') || lowerMsg.contains('system') || lowerMsg.contains('자동')) {
+    } else if (lowerMsg.contains('시스템') ||
+        lowerMsg.contains('system') ||
+        lowerMsg.contains('자동')) {
       return 'system';
     }
 

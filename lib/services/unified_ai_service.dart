@@ -15,8 +15,13 @@ class UnifiedAIService {
   GroqAIService? _groqService;
   final LocalAIService _localService = LocalAIService();
 
-  UnifiedAIService() {
-    _loadSettings();
+  UnifiedAIService._();
+
+  /// 팩토리 생성자 - 설정을 비동기로 로드
+  static Future<UnifiedAIService> create() async {
+    final service = UnifiedAIService._();
+    await service._loadSettings();
+    return service;
   }
 
   /// 설정 불러오기

@@ -61,7 +61,8 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
               child: StreamBuilder<List<MonthlyPlan>>(
                 stream: _firestoreService.getMonthlyPlans(userId, monthString),
                 builder: (context, monthlySnapshot) {
-                  if (monthlySnapshot.connectionState == ConnectionState.waiting) {
+                  if (monthlySnapshot.connectionState ==
+                      ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
@@ -71,7 +72,10 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
 
                   final monthlyPlans = monthlySnapshot.data ?? [];
                   final planColors = _buildPlanColorAssignments(monthlyPlans);
-                  final planRangeMap = _buildPlanRangeMap(monthlyPlans, planColors);
+                  final planRangeMap = _buildPlanRangeMap(
+                    monthlyPlans,
+                    planColors,
+                  );
 
                   return StreamBuilder<List<WeeklyPlan>>(
                     stream: _firestoreService.getWeeklyPlansByDateRange(
@@ -103,7 +107,12 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
 
                           if (isWide) {
                             return Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                12,
+                                16,
+                                20,
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -144,6 +153,24 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
 
   Widget _buildHeader(ColorScheme colorScheme) {
     final textColor = colorScheme.onPrimaryContainer;
+    final titleGroup = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '월간 목표',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: textColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '이번 달 계획을 한눈에 확인하세요',
+          style: TextStyle(fontSize: 12, color: textColor.withAlpha(160)),
+        ),
+      ],
+    );
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
@@ -154,32 +181,31 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           bottomRight: Radius.circular(24),
         ),
       ),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 420;
+          if (isCompact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                titleGroup,
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _buildMonthNavigator(colorScheme),
+                ),
+              ],
+            );
+          }
+
+          return Row(
             children: [
-              Text(
-                '월간 목표',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '이번 달 계획을 한눈에 확인하세요',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: textColor.withAlpha(160),
-                ),
-              ),
+              Expanded(child: titleGroup),
+              const SizedBox(width: 12),
+              _buildMonthNavigator(colorScheme),
             ],
-          ),
-          const Spacer(),
-          _buildMonthNavigator(colorScheme),
-        ],
+          );
+        },
       ),
     );
   }
@@ -204,10 +230,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           const SizedBox(width: 6),
           Text(
             '${_selectedMonth.year}년 ${_selectedMonth.month}월',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700, color: textColor),
           ),
           const SizedBox(width: 6),
           _buildNavIcon(
@@ -267,8 +290,14 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     final textTheme = Theme.of(context).textTheme;
     final size = MediaQuery.of(context).size;
     final isCompact = size.width < 520;
-    final rowHeight = isCompact ? 56.0 : 72.0;
-    final cellMargin = isCompact ? const EdgeInsets.all(3) : const EdgeInsets.all(4);
+    final rowHeight = isCompact ? 60.0 : 72.0;
+    final cellMargin = isCompact
+        ? const EdgeInsets.all(3)
+        : const EdgeInsets.all(4);
+    final markerTopPadding = isCompact ? 4.0 : 6.0;
+    final markerBarWidth = isCompact ? 16.0 : 20.0;
+    final markerBarHeight = isCompact ? 2.5 : 3.0;
+    final markerBarSpacing = isCompact ? 1.5 : 2.0;
 
     final calendar = TableCalendar(
       firstDay: DateTime.utc(2020, 1, 1),
@@ -282,12 +311,14 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
       sixWeekMonthsEnforced: false,
       availableGestures: AvailableGestures.horizontalSwipe,
       daysOfWeekStyle: DaysOfWeekStyle(
-        weekdayStyle: textTheme.labelSmall?.copyWith(
+        weekdayStyle:
+            textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurfaceVariant,
             ) ??
             const TextStyle(fontWeight: FontWeight.w600),
-        weekendStyle: textTheme.labelSmall?.copyWith(
+        weekendStyle:
+            textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurfaceVariant,
             ) ??
@@ -316,26 +347,31 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           color: colorScheme.primary,
           borderRadius: BorderRadius.circular(12),
         ),
-        defaultTextStyle: textTheme.bodySmall?.copyWith(
+        defaultTextStyle:
+            textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
             ) ??
             const TextStyle(fontWeight: FontWeight.w600),
-        weekendTextStyle: textTheme.bodySmall?.copyWith(
+        weekendTextStyle:
+            textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
             ) ??
             const TextStyle(fontWeight: FontWeight.w600),
-        outsideTextStyle: textTheme.bodySmall?.copyWith(
+        outsideTextStyle:
+            textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant.withAlpha(140),
             ) ??
             const TextStyle(),
-        todayTextStyle: textTheme.bodySmall?.copyWith(
+        todayTextStyle:
+            textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: colorScheme.onPrimaryContainer,
             ) ??
             const TextStyle(fontWeight: FontWeight.w700),
-        selectedTextStyle: textTheme.bodySmall?.copyWith(
+        selectedTextStyle:
+            textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w700,
               color: colorScheme.onPrimary,
             ) ??
@@ -354,7 +390,8 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           _selectedMonth = DateTime(focusedDay.year, focusedDay.month, 1);
         });
       },
-      eventLoader: (day) => _buildCalendarMarkers(day, planRangeMap, weeklyCountMap),
+      eventLoader: (day) =>
+          _buildCalendarMarkers(day, planRangeMap, weeklyCountMap),
       calendarBuilders: CalendarBuilders(
         markerBuilder: (context, day, events) {
           if (events.isEmpty) {
@@ -362,9 +399,10 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           }
 
           final planMarkers = events.whereType<_PlanMarker>().toList();
-          final weeklyCount = events
-              .whereType<_WeeklyCountMarker>()
-              .fold<int>(0, (sum, marker) => sum + marker.count);
+          final weeklyCount = events.whereType<_WeeklyCountMarker>().fold<int>(
+            0,
+            (sum, marker) => sum + marker.count,
+          );
 
           if (planMarkers.isEmpty && weeklyCount == 0) {
             return const SizedBox.shrink();
@@ -374,7 +412,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           final extraBars = planMarkers.length - maxBars;
 
           return Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: markerTopPadding),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -382,11 +420,13 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ...planMarkers.take(maxBars).map(
+                      ...planMarkers
+                          .take(maxBars)
+                          .map(
                             (marker) => Container(
-                              margin: const EdgeInsets.only(bottom: 2),
-                              width: 20,
-                              height: 3,
+                              margin: EdgeInsets.only(bottom: markerBarSpacing),
+                              width: markerBarWidth,
+                              height: markerBarHeight,
                               decoration: BoxDecoration(
                                 color: marker.color,
                                 borderRadius: BorderRadius.circular(2),
@@ -397,15 +437,20 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                         Text(
                           '+$extraBars',
                           style: textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w700,
-                              ),
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            fontSize: isCompact ? 9 : null,
+                          ),
                         ),
                     ],
                   ),
                 if (weeklyCount > 0) ...[
                   if (planMarkers.isNotEmpty) const SizedBox(height: 2),
-                  _buildWeeklyCountBadge(context, weeklyCount),
+                  _buildWeeklyCountBadge(
+                    context,
+                    weeklyCount,
+                    dense: isCompact,
+                  ),
                 ],
               ],
             ),
@@ -435,14 +480,12 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
             children: [
               Text(
                 '캘린더',
-                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(width: 8),
-              _buildCountChip(
-                context,
-                label: '목표',
-                count: totalMonthlyPlans,
-              ),
+              _buildCountChip(context, label: '목표', count: totalMonthlyPlans),
               const SizedBox(width: 6),
               _buildCountChip(
                 context,
@@ -601,7 +644,9 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
   }) {
     final child = plan.subjectId != null
         ? StreamBuilder<Subject?>(
-            stream: _firestoreService.getSubjectById(plan.subjectId!).asStream(),
+            stream: _firestoreService
+                .getSubjectById(plan.subjectId!)
+                .asStream(),
             builder: (context, snapshot) {
               return _buildMonthlyPlanTile(
                 context,
@@ -611,11 +656,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
               );
             },
           )
-        : _buildMonthlyPlanTile(
-            context,
-            plan: plan,
-            accentColor: accentColor,
-          );
+        : _buildMonthlyPlanTile(context, plan: plan, accentColor: accentColor);
 
     return _buildFadeSlide(child, delay: 120 + (index * 40));
   }
@@ -635,16 +676,22 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     final statusColor = _getPlanStatusColor(progress, accentColor, colorScheme);
     final ddayText = _getPlanDdayText(plan, now, progress);
     final subjectName = subject?.name ?? plan.subject;
-    final subjectIcon = subject != null ? SubjectIconHelper.getIcon(subject.icon) : null;
+    final subjectIcon = subject != null
+        ? SubjectIconHelper.getIcon(subject.icon)
+        : null;
     final subjectColor = subject != null
         ? Color(int.parse(subject.color.replaceFirst('#', '0xFF')))
         : accentColor;
     final subtaskTotal = plan.subtasks.length;
     final subtaskCompleted = plan.subtasks.where((s) => s.isCompleted).length;
-    final subtaskProgress = subtaskTotal == 0 ? 0.0 : subtaskCompleted / subtaskTotal;
+    final subtaskProgress = subtaskTotal == 0
+        ? 0.0
+        : subtaskCompleted / subtaskTotal;
 
     return Material(
-      color: plan.isCompleted ? colorScheme.surfaceVariant.withAlpha(120) : colorScheme.surface,
+      color: plan.isCompleted
+          ? colorScheme.surfaceVariant.withAlpha(120)
+          : colorScheme.surface,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -674,7 +721,9 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                               plan.title,
                               style: textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
-                                decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                                decoration: plan.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                           ),
@@ -682,16 +731,15 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                             value: plan.isCompleted,
                             onChanged: (value) async {
                               final next = value ?? false;
-                              await _firestoreService.updateMonthlyPlan(
-                                plan.id,
-                                {
-                                  'isCompleted': next,
-                                  'completedAt': next ? DateTime.now() : null,
-                                },
-                              );
+                              await _firestoreService
+                                  .updateMonthlyPlan(plan.id, {
+                                    'isCompleted': next,
+                                    'completedAt': next ? DateTime.now() : null,
+                                  });
                             },
                             activeColor: accentColor,
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
                           ),
                           PopupMenuButton<String>(
@@ -720,7 +768,10 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                                   children: [
                                     Icon(Icons.delete, color: Colors.red),
                                     SizedBox(width: 8),
-                                    Text('삭제', style: TextStyle(color: Colors.red)),
+                                    Text(
+                                      '삭제',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -749,14 +800,20 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                             value: subtaskProgress,
                             minHeight: 6,
                             backgroundColor: colorScheme.surfaceVariant,
-                            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              accentColor,
+                            ),
                           ),
                         ),
                       ],
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.date_range, size: 14, color: colorScheme.onSurfaceVariant),
+                          Icon(
+                            Icons.date_range,
+                            size: 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             rangeText,
@@ -767,11 +824,19 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                           ),
                           if (statusLabel.isNotEmpty) ...[
                             const SizedBox(width: 8),
-                            _buildStatusChip(context, label: statusLabel, color: statusColor),
+                            _buildStatusChip(
+                              context,
+                              label: statusLabel,
+                              color: statusColor,
+                            ),
                           ],
                           if (ddayText != null) ...[
                             const SizedBox(width: 6),
-                            _buildStatusChip(context, label: ddayText, color: statusColor),
+                            _buildStatusChip(
+                              context,
+                              label: ddayText,
+                              color: statusColor,
+                            ),
                           ],
                         ],
                       ),
@@ -815,10 +880,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     );
   }
 
-  Widget _buildEmptyPlansState(
-    BuildContext context, {
-    required String month,
-  }) {
+  Widget _buildEmptyPlansState(BuildContext context, {required String month}) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
@@ -834,16 +896,16 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           const SizedBox(height: 12),
           Text(
             '이번 달 목표가 없습니다',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Text(
             '예시: 영어 2권 완독',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
@@ -866,14 +928,16 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
           spacing: 4,
           children: _planPalette
               .take(3)
-              .map((color) => Container(
-                    width: 12,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ))
+              .map(
+                (color) => Container(
+                  width: 12,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              )
               .toList(),
         ),
         const SizedBox(width: 6),
@@ -896,21 +960,29 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     );
   }
 
-  Widget _buildWeeklyCountBadge(BuildContext context, int count) {
+  Widget _buildWeeklyCountBadge(
+    BuildContext context,
+    int count, {
+    bool dense = false,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 4 : 6,
+        vertical: dense ? 1 : 2,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(dense ? 6 : 8),
       ),
       child: Text(
         '$count',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSecondaryContainer,
-            ),
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSecondaryContainer,
+          fontSize: dense ? 9 : null,
+        ),
       ),
     );
   }
@@ -934,9 +1006,9 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
       child: Text(
         '$label $count',
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: chipColor,
-            ),
+          fontWeight: FontWeight.w700,
+          color: chipColor,
+        ),
       ),
     );
   }
@@ -956,9 +1028,9 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
@@ -1073,8 +1145,12 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     final hue = (hash % 360).toDouble();
     final saturation = 0.55 + ((hash >> 3) % 25) / 100;
     final lightness = 0.45 + ((hash >> 5) % 20) / 100;
-    return HSLColor.fromAHSL(1, hue, saturation.clamp(0.45, 0.85), lightness.clamp(0.4, 0.65))
-        .toColor();
+    return HSLColor.fromAHSL(
+      1,
+      hue,
+      saturation.clamp(0.45, 0.85),
+      lightness.clamp(0.4, 0.65),
+    ).toColor();
   }
 
   String _formatPlanRange(MonthlyPlan plan) {
@@ -1132,7 +1208,11 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     }
   }
 
-  Color _getPlanStatusColor(_PlanProgress progress, Color accent, ColorScheme colorScheme) {
+  Color _getPlanStatusColor(
+    _PlanProgress progress,
+    Color accent,
+    ColorScheme colorScheme,
+  ) {
     switch (progress) {
       case _PlanProgress.completed:
         return accent;
@@ -1146,8 +1226,13 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     }
   }
 
-  String? _getPlanDdayText(MonthlyPlan plan, DateTime today, _PlanProgress progress) {
-    if (progress == _PlanProgress.completed || progress == _PlanProgress.ended) {
+  String? _getPlanDdayText(
+    MonthlyPlan plan,
+    DateTime today,
+    _PlanProgress progress,
+  ) {
+    if (progress == _PlanProgress.completed ||
+        progress == _PlanProgress.ended) {
       return null;
     }
     final range = _resolvePlanRange(plan);
@@ -1163,9 +1248,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
   void _addPlan(String month) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MonthlyFormScreen(month: month),
-      ),
+      MaterialPageRoute(builder: (context) => MonthlyFormScreen(month: month)),
     );
   }
 
@@ -1197,17 +1280,29 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                   final progress = _getPlanProgress(plan, now);
                   final statusLabel = _getPlanStatusLabel(progress);
                   final accent = _colorForPlanId(plan.id);
-                  final statusColor = _getPlanStatusColor(progress, accent, Theme.of(context).colorScheme);
+                  final statusColor = _getPlanStatusColor(
+                    progress,
+                    accent,
+                    Theme.of(context).colorScheme,
+                  );
                   final ddayText = _getPlanDdayText(plan, now, progress);
 
                   return Row(
                     children: [
                       const Icon(Icons.timelapse, size: 18),
                       const SizedBox(width: 8),
-                      _buildStatusChip(context, label: statusLabel, color: statusColor),
+                      _buildStatusChip(
+                        context,
+                        label: statusLabel,
+                        color: statusColor,
+                      ),
                       if (ddayText != null) ...[
                         const SizedBox(width: 6),
-                        _buildStatusChip(context, label: ddayText, color: statusColor),
+                        _buildStatusChip(
+                          context,
+                          label: ddayText,
+                          color: statusColor,
+                        ),
                       ],
                     ],
                   );
@@ -1219,10 +1314,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                 children: [
                   const Icon(Icons.calendar_today, size: 18),
                   const SizedBox(width: 8),
-                  Text(
-                    plan.month,
-                    style: const TextStyle(fontSize: 15),
-                  ),
+                  Text(plan.month, style: const TextStyle(fontSize: 15)),
                 ],
               ),
               if (plan.relatedWeeklyIds.isNotEmpty) ...[
@@ -1243,11 +1335,15 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
               // 과목
               if (plan.subjectId != null)
                 StreamBuilder<Subject?>(
-                  stream: _firestoreService.getSubjectById(plan.subjectId!).asStream(),
+                  stream: _firestoreService
+                      .getSubjectById(plan.subjectId!)
+                      .asStream(),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data != null) {
                       final subject = snapshot.data!;
-                      final color = Color(int.parse(subject.color.replaceFirst('#', '0xFF')));
+                      final color = Color(
+                        int.parse(subject.color.replaceFirst('#', '0xFF')),
+                      );
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
@@ -1285,11 +1381,22 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                       child: Wrap(
                         spacing: 6,
                         runSpacing: 6,
-                        children: plan.pageRanges.map((range) => Chip(
-                          label: Text('p.$range', style: const TextStyle(fontSize: 12)),
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        )).toList(),
+                        children: plan.pageRanges
+                            .map(
+                              (range) => Chip(
+                                label: Text(
+                                  'p.$range',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 0,
+                                ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ],
@@ -1314,7 +1421,6 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-
             ],
           ),
         ),
@@ -1340,10 +1446,7 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MonthlyFormScreen(
-          month: plan.month,
-          plan: plan,
-        ),
+        builder: (context) => MonthlyFormScreen(month: plan.month, plan: plan),
       ),
     );
   }
@@ -1371,7 +1474,10 @@ class _MonthlyScreenState extends State<MonthlyScreen> {
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showSnackBar(
-                  SnackBar(content: Text('오류: $e'), backgroundColor: Colors.red),
+                  SnackBar(
+                    content: Text('오류: $e'),
+                    backgroundColor: Colors.red,
+                  ),
                 );
               }
             },
@@ -1391,12 +1497,7 @@ class _PlanRange {
   const _PlanRange(this.start, this.end);
 }
 
-enum _PlanProgress {
-  upcoming,
-  ongoing,
-  ended,
-  completed,
-}
+enum _PlanProgress { upcoming, ongoing, ended, completed }
 
 abstract class _CalendarMarker {
   const _CalendarMarker();

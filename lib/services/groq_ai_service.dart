@@ -21,10 +21,13 @@ class GroqAIService {
 2. 주간/월간 계획 추가
 3. 학습 목표 설정
 4. 과목 추가
-5. 학습 통계 확인
-6. 할일 관리
-7. 검색
-8. 공부 팁 추천
+5. 학습 자료 추가
+6. 화면 설정
+7. 할일 보관함 추가
+8. 학습 통계 확인
+9. 할일 관리
+10. 검색
+11. 공부 팁 추천
 
 **응답 스타일:**
 - 짧고 명확하게 답변하세요
@@ -74,7 +77,7 @@ class GroqAIService {
 
 다음 형식의 JSON으로만 응답하세요 (설명 없이):
 {
-  "action": "create_schedule | view_schedule | view_stats | manage_todo | search | add_to_backlog | add_subject | set_goal | set_weekly_plan | set_monthly_plan | chat",
+  "action": "create_schedule | view_schedule | view_stats | manage_todo | search | add_to_backlog | add_subject | add_study_resource | set_goal | set_weekly_plan | set_monthly_plan | set_theme | chat",
   "parameters": {
     // action에 따라 필요한 파라미터
     // create_schedule: {"subject": "과목명", "time": "시간 정보", "duration": "시간(분)", "materials": ["자료1", "자료2"]}
@@ -84,9 +87,11 @@ class GroqAIService {
     // search: {"keyword": "검색어"}
     // add_to_backlog: {"subject": "할일 내용", "description": "상세 설명"}
     // add_subject: {"name": "과목명", "color": "#2196F3", "icon": "book"}
+    // add_study_resource: {"title": "자료명", "type": "lecture|book", "notes": "설명", "total_units": "24"}
     // set_goal: {"period": "daily|weekly|monthly", "target": "120", "subject_targets": {"수학": 60}}
     // set_weekly_plan: {"title": "주간 목표", "week": "이번 주", "subject": "수학", "notes": "요약"}
     // set_monthly_plan: {"title": "월간 목표", "month": "이번 달", "subject": "영어", "notes": "요약"}
+    // set_theme: {"theme": "light|dark|system"}
   },
   "confidence": 0.0~1.0 (신뢰도)
 }
@@ -99,9 +104,11 @@ class GroqAIService {
 - search: 찾기/검색 + (키워드)
 - add_to_backlog: 할일보관함에 추가 + (내용 포함)
 - add_subject: 과목 추가/등록
+- add_study_resource: 학습 자료 추가/등록
 - set_goal: 학습 목표 설정 (일간/주간/월간)
 - set_weekly_plan: 주간 계획 추가/설정
 - set_monthly_plan: 월간 계획 추가/설정
+- set_theme: 화면 테마 설정 (라이트/다크/시스템)
 - chat: 위에 해당하지 않는 일반 대화
 
 **추가 파라미터 추출:**
@@ -270,6 +277,18 @@ class GroqAIService {
         parameters['notes'] = notesMatch.group(1);
       }
 
+      final typeMatch = RegExp(r'"type":\s*"([^"]+)"').firstMatch(text);
+      if (typeMatch != null) {
+        parameters['type'] = typeMatch.group(1);
+      }
+
+      final totalUnitsMatch =
+          RegExp(r'"total_units":\s*"([^"]+)"').firstMatch(text) ??
+          RegExp(r'"total_units":\s*([0-9.]+)').firstMatch(text);
+      if (totalUnitsMatch != null) {
+        parameters['total_units'] = totalUnitsMatch.group(1);
+      }
+
       final weekMatch = RegExp(r'"week":\s*"([^"]+)"').firstMatch(text);
       if (weekMatch != null) {
         parameters['week'] = weekMatch.group(1);
@@ -295,6 +314,11 @@ class GroqAIService {
       final planMatch = RegExp(r'"plan":\s*"([^"]+)"').firstMatch(text);
       if (planMatch != null) {
         parameters['plan'] = planMatch.group(1);
+      }
+
+      final themeMatch = RegExp(r'"theme":\s*"([^"]+)"').firstMatch(text);
+      if (themeMatch != null) {
+        parameters['theme'] = themeMatch.group(1);
       }
 
       final actionParamMatch = RegExp(
