@@ -296,9 +296,14 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
     required List<DateTime> weekDates,
     required List<WeeklyPlan> allPlans,
   }) {
+    // 하루 칸의 넓이를 280픽셀로 확대 (기존보다 훨씬 넓음)
+    const dayCardWidth = 280.0;
+    const cardSpacing = 12.0;
+
     return SingleChildScrollView(
       primary: true,
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+      scrollDirection: Axis.horizontal, // 가로 스크롤 활성화
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(weekDates.length, (index) {
@@ -306,9 +311,10 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
           final dayPlans = allPlans.where((plan) => DateHelper.isSameDay(plan.date, date)).toList();
           final isToday = DateHelper.isToday(date);
 
-          return Expanded(
+          return SizedBox(
+            width: dayCardWidth,
             child: Padding(
-              padding: EdgeInsets.only(right: index == weekDates.length - 1 ? 0 : 10),
+              padding: EdgeInsets.only(right: index == weekDates.length - 1 ? 0 : cardSpacing),
               child: _buildDayCard(
                 date: date,
                 isToday: isToday,
@@ -543,6 +549,7 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _showPlanDetails(plan, weekStart, weekEnd),
+        onLongPress: () => _showPlanOptions(plan, weekStart, weekEnd),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -869,5 +876,156 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
         ],
       ),
     );
+  }
+
+  // 일정 옵션 메뉴 표시 (롱프레스)
+  void _showPlanOptions(WeeklyPlan plan, DateTime weekStart, DateTime weekEnd) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 핸들
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // 제목
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Text(
+                plan.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Divider(height: 1),
+            // 상세보기
+            ListTile(
+              leading: Icon(Icons.info_outline, color: colorScheme.primary),
+              title: const Text('상세보기'),
+              onTap: () {
+                Navigator.pop(context);
+                _showPlanDetails(plan, weekStart, weekEnd);
+              },
+            ),
+            // 내일로 이동 (미완료 일정만)
+            if (!plan.isCompleted) ...[
+              ListTile(
+                leading: Icon(Icons.fast_forward, color: colorScheme.secondary),
+                title: const Text('내일로 이동'),
+                subtitle: Text(
+                  '${DateHelper.toKoreanDateString(plan.date.add(const Duration(days: 1)))}로 이동',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _movePlanToTomorrow(plan);
+                },
+              ),
+            ],
+            // 수정
+            ListTile(
+              leading: Icon(Icons.edit_outlined, color: colorScheme.tertiary),
+              title: const Text('수정하기'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WeeklyFormScreen(
+                      date: plan.date,
+                      weekStart: weekStart,
+                      weekEnd: weekEnd,
+                      plan: plan,
+                    ),
+                  ),
+                );
+              },
+            ),
+            // 삭제
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('삭제하기', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDelete(plan);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 내일로 이동
+  Future<void> _movePlanToTomorrow(WeeklyPlan plan) async {
+    final tomorrow = plan.date.add(const Duration(days: 1));
+
+    // 확인 다이얼로그
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('내일로 이동'),
+        content: Text(
+          '이 일정을 ${DateHelper.toKoreanDateString(tomorrow)}로 이동하시겠습니까?\n\n'
+          '일정: ${plan.title}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('이동'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Firestore에서 날짜 업데이트
+      await _firestoreService.updateWeeklyPlan(
+        plan.id,
+        {'date': tomorrow},
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ "${plan.title}"을(를) 내일로 이동했습니다'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ 이동 실패: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

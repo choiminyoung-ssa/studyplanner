@@ -375,7 +375,7 @@ class TodayScreen extends StatelessWidget {
       context,
       icon: Icons.calendar_view_week_rounded,
       title: '이번 주 계획',
-      subtitle: '이번 주 상위 5개',
+      subtitle: '이번 주 전체 일정',
       child: StreamBuilder<List<WeeklyPlan>>(
         stream: firestoreService.getWeeklyPlansByDateRange(
           userId,
@@ -424,7 +424,7 @@ class TodayScreen extends StatelessWidget {
               content = Column(
                 key: const ValueKey('weekly-list'),
                 children:
-                    weeklyPlans.take(5).map((plan) => _buildWeeklyPlanTile(context, plan)).toList(),
+                    weeklyPlans.map((plan) => _buildWeeklyPlanTile(context, plan)).toList(),
               );
             }
           }
