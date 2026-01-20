@@ -15,13 +15,14 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
   late AISettings _currentSettings;
   final TextEditingController _apiKeyController = TextEditingController();
   bool _isSaving = false;
-  bool _showApiKey = false;
+  bool _hasStoredKey = false;
 
   @override
   void initState() {
     super.initState();
     _currentSettings = widget.aiService.currentSettings;
-    _apiKeyController.text = _currentSettings.geminiApiKey ?? '';
+    _hasStoredKey = _currentSettings.geminiApiKey?.trim().isNotEmpty ?? false;
+    _apiKeyController.clear();
   }
 
   @override
@@ -33,11 +34,13 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
   Future<void> _saveSettings() async {
     setState(() => _isSaving = true);
 
+    final inputKey = _apiKeyController.text.trim();
+    final resolvedKey =
+        inputKey.isEmpty ? _currentSettings.geminiApiKey : inputKey;
+
     final newSettings = AISettings(
       mode: _currentSettings.mode,
-      geminiApiKey: _apiKeyController.text.trim().isEmpty
-          ? null
-          : _apiKeyController.text.trim(),
+      geminiApiKey: resolvedKey?.trim().isEmpty == true ? null : resolvedKey,
     );
 
     final success = await widget.aiService.updateSettings(newSettings);
@@ -47,6 +50,8 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
     if (!mounted) return;
 
     if (success) {
+      _currentSettings = newSettings;
+      _hasStoredKey = _currentSettings.geminiApiKey?.trim().isNotEmpty ?? false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ 설정이 저장되었습니다'),
@@ -172,7 +177,9 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Gemini API 키는 Google AI Studio에서 무료로 발급받을 수 있습니다.',
+                _hasStoredKey
+                    ? '저장된 키가 있습니다. 보안상 화면에 표시하지 않습니다.'
+                    : 'Gemini API 키는 Google AI Studio에서 무료로 발급받을 수 있습니다.',
                 style: TextStyle(
                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                   fontSize: 14,
@@ -182,34 +189,19 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
 
               TextField(
                 controller: _apiKeyController,
-                obscureText: !_showApiKey,
+                obscureText: true,
                 style: const TextStyle(fontSize: 15),
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'AIza...',
+                  hintText: _hasStoredKey ? '새 API 키 입력' : 'AIza...',
                   prefixIcon: Icon(
                     Icons.key_rounded,
                     color: isDark
                         ? Colors.blue[400]
                         : Theme.of(context).colorScheme.primary,
                   ),
-                  suffixIcon: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          _showApiKey
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _showApiKey = !_showApiKey;
-                          });
-                        },
-                      ),
-                      if (_apiKeyController.text.isNotEmpty)
-                        IconButton(
+                  suffixIcon: _apiKeyController.text.isNotEmpty
+                      ? IconButton(
                           icon: Icon(
                             Icons.clear_rounded,
                             color: isDark ? Colors.grey[400] : Colors.grey[600],
@@ -219,9 +211,8 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
                               _apiKeyController.clear();
                             });
                           },
-                        ),
-                    ],
-                  ),
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),

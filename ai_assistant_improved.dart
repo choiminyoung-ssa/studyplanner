@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as p;
 
 // ==================== 데이터 모델 ====================
 class ScheduleItem {
@@ -81,7 +81,7 @@ class ScheduleDatabase {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'schedules.db');
+    String path = p.join(await getDatabasesPath(), 'schedules.db');
     return openDatabase(
       path,
       version: 1,

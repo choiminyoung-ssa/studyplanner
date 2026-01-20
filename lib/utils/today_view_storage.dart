@@ -1,3 +1,5 @@
+export 'today_view_storage_base.dart';
+
 import 'today_view_storage_base.dart';
 import 'today_view_storage_stub.dart'
     if (dart.library.html) 'today_view_storage_web.dart'

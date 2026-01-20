@@ -616,54 +616,54 @@ class _TodayScreenState extends State<TodayScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.calendar_month_rounded,
-              color: colorScheme.primary,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateHelper.toKoreanDateString(today),
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${DateHelper.getWeekdayName(today)}요일',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onPrimaryContainer.withAlpha(160),
-                  ),
-                ),
-                if (!minimalMode) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    '오늘의 루틴을 시작해요',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onPrimaryContainer.withAlpha(150),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.calendar_month_rounded,
+                  color: colorScheme.primary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateHelper.toKoreanDateString(today),
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${DateHelper.getWeekdayName(today)}요일',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onPrimaryContainer.withAlpha(160),
+                      ),
+                    ),
+                    if (!minimalMode) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        '오늘의 루틴을 시작해요',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onPrimaryContainer.withAlpha(150),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
@@ -675,42 +675,78 @@ class _TodayScreenState extends State<TodayScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 8),
-              _buildMinimalToggle(context, minimalMode, onToggleMinimal),
             ],
           ),
+          const SizedBox(height: 14),
+          _buildMinimalToggleCard(context, minimalMode, onToggleMinimal),
         ],
       ),
     );
   }
 
-  Widget _buildMinimalToggle(
+  Widget _buildMinimalToggleCard(
     BuildContext context,
     bool minimalMode,
     ValueChanged<bool> onToggle,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
+    final accent = minimalMode ? colorScheme.primary : colorScheme.outline;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withAlpha(90)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withAlpha(12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '미니멀',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withAlpha(18),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.filter_alt_rounded,
+              color: accent,
+            ),
           ),
-          const SizedBox(width: 6),
-          Switch.adaptive(
-            value: minimalMode,
-            onChanged: onToggle,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '미니멀 모드',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                Text(
+                  minimalMode ? '필요한 정보만 표시 중' : '설명 없이 핵심만 보기',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: 1.1,
+            child: Switch.adaptive(
+              value: minimalMode,
+              onChanged: onToggle,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
         ],
       ),

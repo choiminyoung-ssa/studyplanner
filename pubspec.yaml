@@ -65,6 +65,8 @@ dependencies:
   fl_chart: ^0.66.0
   shared_preferences: ^2.2.3
   shared_preferences_web: ^2.4.3
+  sqflite: ^2.3.2
+  path: ^1.9.0
 
   # AI Chatbot (Dual Mode: Gemini + Local)
   # Supports both Google Gemini API and local pattern matching
