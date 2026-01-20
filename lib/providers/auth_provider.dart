@@ -102,7 +102,7 @@ class AuthProvider with ChangeNotifier {
       } else {
         await _authService.signIn(email: email, password: password);
       }
-      
+
       // 로그인 성공 시 SharedPreferences에 사용자 정보 저장
       final prefs = await SharedPreferences.getInstance();
       final user = FirebaseAuth.instance.currentUser;
@@ -117,7 +117,7 @@ class AuthProvider with ChangeNotifier {
         await prefs.setString('user_display_name', user.displayName ?? '');
         await prefs.setString('user_photo_url', user.photoURL ?? '');
       }
-      
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -141,14 +141,14 @@ class AuthProvider with ChangeNotifier {
       _offlineEmail = null;
       _offlineDisplayName = null;
       _offlinePhotoUrl = null;
-      
+
       // 로그아웃 시 SharedPreferences에서 사용자 정보 삭제
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('user_id');
       await prefs.remove('user_email');
       await prefs.remove('user_display_name');
       await prefs.remove('user_photo_url');
-      
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -166,7 +166,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       await _authService.signInWithGoogle();
-      
+
       // Google 로그인 성공 시 SharedPreferences에 사용자 정보 저장
       final prefs = await SharedPreferences.getInstance();
       final user = FirebaseAuth.instance.currentUser;
@@ -181,7 +181,7 @@ class AuthProvider with ChangeNotifier {
         await prefs.setString('user_display_name', user.displayName ?? '');
         await prefs.setString('user_photo_url', user.photoURL ?? '');
       }
-      
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -206,7 +206,7 @@ class AuthProvider with ChangeNotifier {
         // 인터넷 연결 확인 후 Firebase와 동기화 시도
         final prefs = await SharedPreferences.getInstance();
         final savedUserId = prefs.getString('user_id');
-        
+
         if (savedUserId != null) {
           // Firebase 인증 상태 확인
           final firebaseUser = FirebaseAuth.instance.currentUser;

@@ -37,7 +37,8 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     // 환영 메시지
     _messages.add(
       ChatMessage(
-        text: '안녕하세요! 👋\n\n'
+        text:
+            '안녕하세요! 👋\n\n'
             '저는 학습 플래너 AI 어시스턴트입니다.\n\n'
             '다음과 같은 기능을 도와드릴 수 있어요:\n'
             '• 일정 추가/조회\n'
@@ -70,11 +71,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
     setState(() {
       _messages.add(
-        ChatMessage(
-          text: userMessage,
-          isUser: true,
-          timestamp: DateTime.now(),
-        ),
+        ChatMessage(text: userMessage, isUser: true, timestamp: DateTime.now()),
       );
       _isLoading = true;
     });
@@ -91,8 +88,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
       // 더 낮은 신뢰도의 명령어도 실행 (0.6 이상)
       print('🎯 DEBUG: intent = $intent');
-      print('📊 DEBUG: action = ${intent['action']}, confidence = ${intent['confidence']}');
-      
+      print(
+        '📊 DEBUG: action = ${intent['action']}, confidence = ${intent['confidence']}',
+      );
+
       if (intent['confidence'] > 0.6) {
         String? commandResult;
 
@@ -103,8 +102,11 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
             case 'create_schedule':
               print('📅 DEBUG: Creating schedule...');
               // 확인 절차 추가
-              final schedulePreview = _generateSchedulePreview(intent['parameters']);
-              finalResponse = '$aiResponse\n\n━━━━━━━━━━━━━━\n\n$schedulePreview\n\n이 일정을 추가하시겠어요? (예/아니오)';
+              final schedulePreview = _generateSchedulePreview(
+                intent['parameters'],
+              );
+              finalResponse =
+                  '$aiResponse\n\n━━━━━━━━━━━━━━\n\n$schedulePreview\n\n이 일정을 추가하시겠어요? (예/아니오)';
               break;
             case 'view_schedule':
               print('👁️ DEBUG: Viewing schedule...');
@@ -207,7 +209,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           finalResponse = '$aiResponse\n\n⚠️ 명령어 실행 중 오류: ${e.toString()}';
         }
       } else {
-        print('⚠️ DEBUG: Confidence too low (${intent['confidence']}), skipping command execution');
+        print(
+          '⚠️ DEBUG: Confidence too low (${intent['confidence']}), skipping command execution',
+        );
       }
 
       setState(() {
@@ -246,8 +250,14 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
         : <String>[];
 
     final scheduleDateTime = _parseScheduleDateTime(time.toString());
-    final dateStr = DateFormat('M월 d일 (E) a h:mm', 'ko_KR').format(scheduleDateTime);
-    final endTimeStr = _resolveEndTimeStringWithDuration(scheduleDateTime, duration.toString());
+    final dateStr = DateFormat(
+      'M월 d일 (E) a h:mm',
+      'ko_KR',
+    ).format(scheduleDateTime);
+    final endTimeStr = _resolveEndTimeStringWithDuration(
+      scheduleDateTime,
+      duration.toString(),
+    );
 
     final preview = [
       '📅 일정 미리보기',
@@ -274,8 +284,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     } else if (timeStr.contains('내일')) {
       baseDate = baseDate.add(const Duration(days: 1));
     } else if (timeStr.contains('다음주')) {
-      final nextWeekStart =
-          DateHelper.getWeekStartDate(baseDate).add(const Duration(days: 7));
+      final nextWeekStart = DateHelper.getWeekStartDate(
+        baseDate,
+      ).add(const Duration(days: 7));
       final weekdayIndex = _extractWeekdayIndex(timeStr);
       baseDate = weekdayIndex == null
           ? nextWeekStart
@@ -291,20 +302,17 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     int hour = 9;
     int minute = 0;
 
-    final colonMatch =
-        RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
+    final colonMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
     if (colonMatch != null) {
       hour = int.parse(colonMatch.group(1)!);
       minute = int.parse(colonMatch.group(2)!);
     } else {
-      final hourMatch =
-          RegExp(r'(\d{1,2})\s*시').firstMatch(timeStr);
+      final hourMatch = RegExp(r'(\d{1,2})\s*시').firstMatch(timeStr);
       if (hourMatch != null) {
         hour = int.parse(hourMatch.group(1)!);
       }
 
-      final minuteMatch =
-          RegExp(r'(\d{1,2})\s*분').firstMatch(timeStr);
+      final minuteMatch = RegExp(r'(\d{1,2})\s*분').firstMatch(timeStr);
       if (minuteMatch != null) {
         minute = int.parse(minuteMatch.group(1)!);
       }
@@ -320,13 +328,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       }
     }
 
-    return DateTime(
-      baseDate.year,
-      baseDate.month,
-      baseDate.day,
-      hour,
-      minute,
-    );
+    return DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
   }
 
   int? _extractWeekdayIndex(String text) {
@@ -349,7 +351,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     return null;
   }
 
-  String _resolveEndTimeStringWithDuration(DateTime startDateTime, String durationStr) {
+  String _resolveEndTimeStringWithDuration(
+    DateTime startDateTime,
+    String durationStr,
+  ) {
     if (durationStr.isEmpty) {
       return _resolveEndTimeString(startDateTime);
     }
@@ -376,7 +381,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     }
 
     // "2시간 30분" 형태
-    final hourMinuteMatch = RegExp(r'(\d+)\s*시간\s*(\d+)\s*분').firstMatch(durationStr);
+    final hourMinuteMatch = RegExp(
+      r'(\d+)\s*시간\s*(\d+)\s*분',
+    ).firstMatch(durationStr);
     if (hourMinuteMatch != null) {
       final hours = int.parse(hourMinuteMatch.group(1)!);
       final minutes = int.parse(hourMinuteMatch.group(2)!);
@@ -443,7 +450,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 ),
                 Text(
                   '${_aiService.currentAIIcon} ${_aiService.currentAIName}',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.normal,
+                  ),
                 ),
               ],
             ),
@@ -620,7 +630,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                       decoration: InputDecoration(
                         hintText: '메시지를 입력하세요...',
                         hintStyle: TextStyle(
@@ -678,9 +690,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         side: BorderSide(color: Theme.of(context).colorScheme.primary),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       child: Text(
         label,
@@ -696,8 +706,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: message.isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!message.isUser) ...[
@@ -726,8 +737,8 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 color: message.isUser
                     ? Theme.of(context).colorScheme.primary
                     : message.isError
-                        ? Colors.red[50]
-                        : Colors.grey[200],
+                    ? Colors.red[50]
+                    : Colors.grey[200],
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(

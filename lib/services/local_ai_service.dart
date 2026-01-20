@@ -98,22 +98,29 @@ class LocalAIService {
   String _extractTime(String message) {
     // 날짜 추출 로직 (더 정교함)
     final lowerMsg = message.toLowerCase();
-    
+
     // 구체적인 날짜 패턴
-    if (lowerMsg.contains('다음주 월요일') || lowerMsg.contains('다음주 월')) return '다음주 월요일';
-    if (lowerMsg.contains('다음주 화요일') || lowerMsg.contains('다음주 화')) return '다음주 화요일';
-    if (lowerMsg.contains('다음주 수요일') || lowerMsg.contains('다음주 수')) return '다음주 수요일';
-    if (lowerMsg.contains('다음주 목요일') || lowerMsg.contains('다음주 목')) return '다음주 목요일';
-    if (lowerMsg.contains('다음주 금요일') || lowerMsg.contains('다음주 금')) return '다음주 금요일';
-    if (lowerMsg.contains('다음주 토요일') || lowerMsg.contains('다음주 토')) return '다음주 토요일';
-    if (lowerMsg.contains('다음주 일요일') || lowerMsg.contains('다음주 일')) return '다음주 일요일';
-    
+    if (lowerMsg.contains('다음주 월요일') || lowerMsg.contains('다음주 월'))
+      return '다음주 월요일';
+    if (lowerMsg.contains('다음주 화요일') || lowerMsg.contains('다음주 화'))
+      return '다음주 화요일';
+    if (lowerMsg.contains('다음주 수요일') || lowerMsg.contains('다음주 수'))
+      return '다음주 수요일';
+    if (lowerMsg.contains('다음주 목요일') || lowerMsg.contains('다음주 목'))
+      return '다음주 목요일';
+    if (lowerMsg.contains('다음주 금요일') || lowerMsg.contains('다음주 금'))
+      return '다음주 금요일';
+    if (lowerMsg.contains('다음주 토요일') || lowerMsg.contains('다음주 토'))
+      return '다음주 토요일';
+    if (lowerMsg.contains('다음주 일요일') || lowerMsg.contains('다음주 일'))
+      return '다음주 일요일';
+
     // 일반 날짜
     if (lowerMsg.contains('모레')) return '모레';
     if (lowerMsg.contains('내일')) return '내일';
     if (lowerMsg.contains('이번주') || lowerMsg.contains('이번 주')) return '이번 주';
     if (lowerMsg.contains('다음주') || lowerMsg.contains('다음 주')) return '다음 주';
-    
+
     return '오늘';
   }
 
@@ -183,8 +190,7 @@ class LocalAIService {
     final words = message.split(' ');
     String keyword = '';
     for (var word in words) {
-      if (word.length > 1 &&
-          !['찾아', '검색', '해줘', '알려', '보여'].contains(word)) {
+      if (word.length > 1 && !['찾아', '검색', '해줘', '알려', '보여'].contains(word)) {
         keyword = word;
         break;
       }
@@ -263,7 +269,7 @@ class LocalAIService {
 
     final lowerMessage = message.toLowerCase();
     print('🔍 DEBUG: parseUserIntent() - message: "$message"');
-    
+
     Map<String, dynamic> result = {
       'action': 'chat',
       'parameters': {},
@@ -276,7 +282,8 @@ class LocalAIService {
       result['action'] = 'add_subject';
       result['parameters'] = {
         'name': _extractSubjectName(message),
-        if (_extractHexColor(message) != null) 'color': _extractHexColor(message),
+        if (_extractHexColor(message) != null)
+          'color': _extractHexColor(message),
       };
       result['confidence'] = 0.9;
       print('✅ DEBUG: Detected add_subject with confidence 0.9');
@@ -320,9 +327,26 @@ class LocalAIService {
     }
     // 일정 생성 (시간과 학습 자료 파라미터 포함)
     else if ((_containsAny(lowerMessage, ['일정', '스케줄', '계획']) &&
-            _containsAny(lowerMessage, ['추가', '생성', '만들', '등록', '넣', '해야', '해야해', '공부'])) ||
+            _containsAny(lowerMessage, [
+              '추가',
+              '생성',
+              '만들',
+              '등록',
+              '넣',
+              '해야',
+              '해야해',
+              '공부',
+            ])) ||
         (_containsAny(lowerMessage, ['내일', '모레', '다음주', '오후', '아침']) &&
-            _containsAny(lowerMessage, ['수학', '영어', '과학', '국어', '공부', '숙제', '과제']))) {
+            _containsAny(lowerMessage, [
+              '수학',
+              '영어',
+              '과학',
+              '국어',
+              '공부',
+              '숙제',
+              '과제',
+            ]))) {
       result['action'] = 'create_schedule';
       result['parameters'] = {
         'subject': _extractSubject(message),
@@ -335,13 +359,11 @@ class LocalAIService {
     }
     // 일정 조회
     else if ((_containsAny(lowerMessage, ['일정', '스케줄']) &&
-        _containsAny(lowerMessage, ['보여', '알려', '확인', '조회', '뭐', '뭐야'])) ||
+            _containsAny(lowerMessage, ['보여', '알려', '확인', '조회', '뭐', '뭐야'])) ||
         (_containsAny(lowerMessage, ['오늘', '내일', '이번주']) &&
-        _containsAny(lowerMessage, ['뭐', '뭐야', '뭐하', '일정']))) {
+            _containsAny(lowerMessage, ['뭐', '뭐야', '뭐하', '일정']))) {
       result['action'] = 'view_schedule';
-      result['parameters'] = {
-        'date': message,
-      };
+      result['parameters'] = {'date': message};
       result['confidence'] = 0.91;
       print('✅ DEBUG: Detected view_schedule with confidence 0.91');
     }
@@ -349,18 +371,14 @@ class LocalAIService {
     else if (_containsAny(lowerMessage, ['통계', '시간', '얼마', '공부']) &&
         _containsAny(lowerMessage, ['얼마', '시간', '통계', '몇'])) {
       result['action'] = 'view_stats';
-      result['parameters'] = {
-        'period': message,
-      };
+      result['parameters'] = {'period': message};
       result['confidence'] = 0.88;
       print('✅ DEBUG: Detected view_stats with confidence 0.88');
     }
     // 할일 관리
     else if (_containsAny(lowerMessage, ['할일', '할 일', '과제', '숙제', 'todo'])) {
       result['action'] = 'manage_todo';
-      result['parameters'] = {
-        'action': 'list',
-      };
+      result['parameters'] = {'action': 'list'};
       result['confidence'] = 0.87;
       print('✅ DEBUG: Detected manage_todo with confidence 0.87');
     }
@@ -376,14 +394,14 @@ class LocalAIService {
         }
       }
       result['action'] = 'search';
-      result['parameters'] = {
-        'keyword': keyword,
-      };
+      result['parameters'] = {'keyword': keyword};
       result['confidence'] = 0.83;
       print('✅ DEBUG: Detected search with confidence 0.83');
     }
 
-    print('📊 DEBUG: Final result - action: ${result['action']}, confidence: ${result['confidence']}');
+    print(
+      '📊 DEBUG: Final result - action: ${result['action']}, confidence: ${result['confidence']}',
+    );
     return result;
   }
 
@@ -393,8 +411,9 @@ class LocalAIService {
       return quoted;
     }
 
-    final match = RegExp(r'(과목|subject)\s*(추가|등록|생성|만들기|만들어)?\s*([가-힣A-Za-z0-9 ]+)')
-        .firstMatch(message);
+    final match = RegExp(
+      r'(과목|subject)\s*(추가|등록|생성|만들기|만들어)?\s*([가-힣A-Za-z0-9 ]+)',
+    ).firstMatch(message);
     if (match != null) {
       final value = match.group(3)?.trim();
       if (value != null && value.isNotEmpty) {
@@ -442,7 +461,10 @@ class LocalAIService {
     }
 
     final cleaned = message
-        .replaceAll(RegExp(r'(주간|월간|이번 주|이번 달|계획|목표|플랜|추가|설정|등록|세워|짜줘|짜|작성|만들어|만들기|해줘)'), '')
+        .replaceAll(
+          RegExp(r'(주간|월간|이번 주|이번 달|계획|목표|플랜|추가|설정|등록|세워|짜줘|짜|작성|만들어|만들기|해줘)'),
+          '',
+        )
         .replaceAll(RegExp(r'[:：]'), '')
         .trim();
 
@@ -463,7 +485,8 @@ class LocalAIService {
   }
 
   String _extractQuotedText(String message) {
-    final match = RegExp(r'"([^"]+)"').firstMatch(message) ??
+    final match =
+        RegExp(r'"([^"]+)"').firstMatch(message) ??
         RegExp(r"'([^']+)'").firstMatch(message);
     return match?.group(1)?.trim() ?? '';
   }
@@ -471,7 +494,7 @@ class LocalAIService {
   /// 시간 길이 추출 (로컬 AI 전용)
   String _extractDuration(String message) {
     final lowerMsg = message.toLowerCase();
-    
+
     // "3시간" 형태
     final hourMatch = RegExp(r'(\d+)\s*시간').firstMatch(lowerMsg);
     if (hourMatch != null) {
@@ -479,7 +502,9 @@ class LocalAIService {
     }
 
     // "2시간 30분" 형태
-    final hourMinuteMatch = RegExp(r'(\d+)\s*시간\s*(\d+)\s*분').firstMatch(lowerMsg);
+    final hourMinuteMatch = RegExp(
+      r'(\d+)\s*시간\s*(\d+)\s*분',
+    ).firstMatch(lowerMsg);
     if (hourMinuteMatch != null) {
       return '${hourMinuteMatch.group(1)}시간 ${hourMinuteMatch.group(2)}분';
     }
@@ -515,7 +540,7 @@ class LocalAIService {
 
     for (final entry in materialPatterns.entries) {
       if (materials.length >= 3) break; // 최대 3개까지만
-      
+
       for (final pattern in entry.value) {
         if (lowerMsg.contains(pattern) && !materials.contains(entry.key)) {
           materials.add(entry.key);

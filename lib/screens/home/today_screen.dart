@@ -56,18 +56,9 @@ class _TodayScreenState extends State<TodayScreen> {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 1000;
         final maxWidth = isWide ? 1200.0 : 720.0;
-
-        if (_minimalMode) {
-          return _buildMinimalLayout(
-            context,
-            constraints,
-            userId: userId,
-            today: today,
-            firestoreService: firestoreService,
-          );
-        }
-
-        final padding = const EdgeInsets.fromLTRB(16, 20, 16, 32);
+        final padding = _minimalMode
+            ? const EdgeInsets.fromLTRB(12, 16, 12, 24)
+            : const EdgeInsets.fromLTRB(16, 20, 16, 32);
 
         final headerCard = _buildAnimatedEntry(
           _buildHeaderCard(
@@ -179,81 +170,6 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
-  Widget _buildMinimalLayout(
-    BuildContext context,
-    BoxConstraints constraints, {
-    required String userId,
-    required DateTime today,
-    required FirestoreService firestoreService,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isWide = constraints.maxWidth >= 1100;
-    final gap = 12.0;
-    final padding = const EdgeInsets.fromLTRB(10, 12, 10, 24);
-
-    final headerBar = _buildMinimalHeaderBar(
-      context,
-      today,
-      onToggleMinimal: _setMinimalMode,
-    );
-    final todaySection = _buildTodayPlansSection(
-      context,
-      userId: userId,
-      today: today,
-      firestoreService: firestoreService,
-      minimalMode: true,
-    );
-    final weeklySection = _buildWeeklySection(
-      context,
-      userId: userId,
-      today: today,
-      firestoreService: firestoreService,
-      minimalMode: true,
-    );
-    final monthlySection = _buildMonthlySection(
-      context,
-      userId: userId,
-      today: today,
-      firestoreService: firestoreService,
-      minimalMode: true,
-    );
-
-    return DecoratedBox(
-      decoration: BoxDecoration(color: colorScheme.surface),
-      child: SingleChildScrollView(
-        padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            headerBar,
-            const SizedBox(height: 12),
-            isWide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(child: todaySection),
-                      SizedBox(width: gap),
-                      Expanded(child: weeklySection),
-                      SizedBox(width: gap),
-                      Expanded(child: monthlySection),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      todaySection,
-                      SizedBox(height: gap),
-                      weeklySection,
-                      SizedBox(height: gap),
-                      monthlySection,
-                    ],
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAnimatedEntry(Widget child, {int delay = 0}) {
     final baseDuration = 360;
     final totalDuration = baseDuration + delay;
@@ -288,29 +204,20 @@ class _TodayScreenState extends State<TodayScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final padding = minimal ? 12.0 : 16.0;
     final radius = minimal ? 16.0 : 20.0;
-    final cardColor = minimal
-        ? colorScheme.surfaceContainerHighest.withAlpha(160)
-        : colorScheme.surface;
-    final borderColor = minimal
-        ? colorScheme.outlineVariant.withAlpha(120)
-        : colorScheme.outlineVariant.withAlpha(80);
-    final shadows = minimal
-        ? const <BoxShadow>[]
-        : [
-            BoxShadow(
-              color: colorScheme.shadow.withAlpha(18),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ];
 
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor),
-        boxShadow: shadows,
+        border: Border.all(color: colorScheme.outlineVariant.withAlpha(80)),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withAlpha(18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,7 +228,6 @@ class _TodayScreenState extends State<TodayScreen> {
             title: title,
             subtitle: minimal ? null : subtitle,
             trailing: trailing,
-            minimal: minimal,
           ),
           SizedBox(height: minimal ? 8 : 12),
           child,
@@ -333,9 +239,7 @@ class _TodayScreenState extends State<TodayScreen> {
   Widget _buildLoadingState() {
     return const SizedBox(
       height: 120,
-      child: Center(
-        child: CircularProgressIndicator(),
-      ),
+      child: Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -380,7 +284,8 @@ class _TodayScreenState extends State<TodayScreen> {
                         ),
                         Text(
                           '${(value * 100).toStringAsFixed(0)}%',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: accent,
                               ),
@@ -395,16 +300,14 @@ class _TodayScreenState extends State<TodayScreen> {
                       children: [
                         Text(
                           label,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '완료 $completed / $total',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -466,7 +369,9 @@ class _TodayScreenState extends State<TodayScreen> {
                 icon: Icons.event_available,
                 message: minimalMode ? '오늘 일정이 없습니다' : '오늘 예정된 일정이 없습니다',
                 exampleTitle: minimalMode ? null : '예시: 수학 문제집 1단원',
-                exampleSubtitle: minimalMode ? null : '18:00 ~ 19:30 · 핵심 문제 풀이',
+                exampleSubtitle: minimalMode
+                    ? null
+                    : '18:00 ~ 19:30 · 핵심 문제 풀이',
                 actionLabel: '일정 추가',
                 onAction: () {
                   Navigator.push(
@@ -478,7 +383,9 @@ class _TodayScreenState extends State<TodayScreen> {
                 },
               );
             } else {
-              final completedCount = dailyPlans.where((p) => p.isCompleted).length;
+              final completedCount = dailyPlans
+                  .where((p) => p.isCompleted)
+                  .length;
               final totalCount = dailyPlans.length;
 
               content = Column(
@@ -498,8 +405,16 @@ class _TodayScreenState extends State<TodayScreen> {
                     (plan) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: minimalMode
-                          ? _buildDailyPlanCardMinimal(context, plan, firestoreService)
-                          : _buildDailyPlanCard(context, plan, firestoreService),
+                          ? _buildDailyPlanCardMinimal(
+                              context,
+                              plan,
+                              firestoreService,
+                            )
+                          : _buildDailyPlanCard(
+                              context,
+                              plan,
+                              firestoreService,
+                            ),
                     ),
                   ),
                 ],
@@ -553,7 +468,9 @@ class _TodayScreenState extends State<TodayScreen> {
             final weeklyPlans = snapshot.data ?? [];
             weeklyPlans.sort((a, b) => a.date.compareTo(b.date));
             final filteredPlans = minimalMode
-                ? weeklyPlans.where((plan) => DateHelper.isSameDay(plan.date, today)).toList()
+                ? weeklyPlans
+                      .where((plan) => DateHelper.isSameDay(plan.date, today))
+                      .toList()
                 : weeklyPlans;
 
             if (filteredPlans.isEmpty) {
@@ -581,12 +498,11 @@ class _TodayScreenState extends State<TodayScreen> {
             } else {
               content = Column(
                 key: const ValueKey('weekly-list'),
-                children:
-                    filteredPlans.map((plan) {
-                      return minimalMode
-                          ? _buildWeeklyPlanTileMinimal(context, plan)
-                          : _buildWeeklyPlanTile(context, plan);
-                    }).toList(),
+                children: filteredPlans.map((plan) {
+                  return minimalMode
+                      ? _buildWeeklyPlanTileMinimal(context, plan)
+                      : _buildWeeklyPlanTile(context, plan);
+                }).toList(),
               );
             }
           }
@@ -656,7 +572,9 @@ class _TodayScreenState extends State<TodayScreen> {
                 },
               );
             } else {
-              final completedCount = monthlyPlans.where((p) => p.isCompleted).length;
+              final completedCount = monthlyPlans
+                  .where((p) => p.isCompleted)
+                  .length;
               final totalCount = monthlyPlans.length;
 
               content = Column(
@@ -672,7 +590,9 @@ class _TodayScreenState extends State<TodayScreen> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  ...monthlyPlans.take(3).map(
+                  ...monthlyPlans
+                      .take(3)
+                      .map(
                         (plan) => minimalMode
                             ? _buildMonthlyPlanTileMinimal(context, plan)
                             : _buildMonthlyPlanTile(context, plan),
@@ -764,7 +684,10 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
@@ -778,84 +701,6 @@ class _TodayScreenState extends State<TodayScreen> {
           ),
           const SizedBox(height: 14),
           _buildMinimalToggleCard(context, minimalMode, onToggleMinimal),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMinimalHeaderBar(
-    BuildContext context,
-    DateTime today, {
-    required ValueChanged<bool> onToggleMinimal,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withAlpha(180),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withAlpha(20),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.calendar_month_rounded,
-              color: colorScheme.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  DateHelper.toKoreanDateString(today),
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${DateHelper.getWeekdayName(today)}요일',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
-            ),
-            child: const Text(
-              '미니멀',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Transform.scale(
-            scale: 0.9,
-            child: Switch.adaptive(
-              value: true,
-              onChanged: onToggleMinimal,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
         ],
       ),
     );
@@ -892,10 +737,7 @@ class _TodayScreenState extends State<TodayScreen> {
               color: accent.withAlpha(18),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.filter_alt_rounded,
-              color: accent,
-            ),
+            child: Icon(Icons.filter_alt_rounded, color: accent),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -904,15 +746,15 @@ class _TodayScreenState extends State<TodayScreen> {
               children: [
                 Text(
                   '미니멀 모드',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 Text(
                   minimalMode ? '필요한 정보만 표시 중' : '설명 없이 핵심만 보기',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -951,7 +793,9 @@ class _TodayScreenState extends State<TodayScreen> {
         children: [
           Text(
             '학습 흐름',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Row(
@@ -967,8 +811,8 @@ class _TodayScreenState extends State<TodayScreen> {
           Text(
             '월 → 주 → 일 순서로 계획을 쌓으면 실행이 쉬워져요.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -993,9 +837,9 @@ class _TodayScreenState extends State<TodayScreen> {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -1005,7 +849,11 @@ class _TodayScreenState extends State<TodayScreen> {
   Widget _buildFlowArrow(ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: colorScheme.outline),
+      child: Icon(
+        Icons.arrow_forward_ios_rounded,
+        size: 14,
+        color: colorScheme.outline,
+      ),
     );
   }
 
@@ -1015,25 +863,18 @@ class _TodayScreenState extends State<TodayScreen> {
     required String title,
     String? subtitle,
     Widget? trailing,
-    bool minimal = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    final iconSize = minimal ? 16.0 : 18.0;
-    final iconPadding = minimal ? 5.0 : 6.0;
-    final iconColor = minimal ? colorScheme.primary : colorScheme.primary;
-    final iconBackground = minimal
-        ? colorScheme.surfaceContainerHighest.withAlpha(200)
-        : colorScheme.primaryContainer;
 
     return Row(
       children: [
         Container(
-          padding: EdgeInsets.all(iconPadding),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: iconBackground,
+            color: colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: iconSize, color: iconColor),
+          child: Icon(icon, size: 18, color: colorScheme.primary),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -1042,17 +883,17 @@ class _TodayScreenState extends State<TodayScreen> {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ],
@@ -1096,7 +937,9 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Widget _buildWeeklyPlanTile(BuildContext context, WeeklyPlan plan) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final accentColor = plan.isCompleted
+        ? colorScheme.tertiary
+        : colorScheme.primary;
     final backgroundColor = plan.isCompleted
         ? colorScheme.tertiaryContainer.withAlpha(120)
         : colorScheme.surfaceVariant.withAlpha(80);
@@ -1131,16 +974,18 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   plan.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    decoration: plan.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitleParts.join(' · '),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1159,7 +1004,9 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Widget _buildWeeklyPlanTileMinimal(BuildContext context, WeeklyPlan plan) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final accentColor = plan.isCompleted
+        ? colorScheme.tertiary
+        : colorScheme.primary;
     final backgroundColor = plan.isCompleted
         ? colorScheme.tertiaryContainer.withAlpha(120)
         : colorScheme.surfaceVariant.withAlpha(60);
@@ -1175,7 +1022,9 @@ class _TodayScreenState extends State<TodayScreen> {
       child: Row(
         children: [
           Icon(
-            plan.isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined,
+            plan.isCompleted
+                ? Icons.check_circle_rounded
+                : Icons.circle_outlined,
             size: 16,
             color: accentColor,
           ),
@@ -1187,28 +1036,26 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   plan.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    decoration: plan.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
                 ),
                 if (plan.subject.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     plan.subject,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
             ),
           ),
           if (plan.isCompleted)
-            Icon(
-              Icons.check_rounded,
-              color: accentColor,
-              size: 16,
-            ),
+            Icon(Icons.check_rounded, color: accentColor, size: 16),
         ],
       ),
     );
@@ -1216,7 +1063,9 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Widget _buildMonthlyPlanTile(BuildContext context, MonthlyPlan plan) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final accentColor = plan.isCompleted
+        ? colorScheme.tertiary
+        : colorScheme.primary;
     final backgroundColor = plan.isCompleted
         ? colorScheme.tertiaryContainer.withAlpha(110)
         : colorScheme.surfaceVariant.withAlpha(70);
@@ -1225,7 +1074,11 @@ class _TodayScreenState extends State<TodayScreen> {
     Color? dDayColor;
     if (plan.endDate != null && !plan.isCompleted) {
       final now = DateTime.now();
-      final endDate = DateTime(plan.endDate!.year, plan.endDate!.month, plan.endDate!.day);
+      final endDate = DateTime(
+        plan.endDate!.year,
+        plan.endDate!.month,
+        plan.endDate!.day,
+      );
       final todayDate = DateTime(now.year, now.month, now.day);
       final daysLeft = endDate.difference(todayDate).inDays;
 
@@ -1253,7 +1106,9 @@ class _TodayScreenState extends State<TodayScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            plan.isCompleted ? Icons.check_circle_rounded : Icons.flag_circle_rounded,
+            plan.isCompleted
+                ? Icons.check_circle_rounded
+                : Icons.flag_circle_rounded,
             color: accentColor,
           ),
           const SizedBox(width: 10),
@@ -1264,17 +1119,19 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   plan.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    decoration: plan.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
                 ),
                 if (plan.subject.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     plan.subject,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -1283,7 +1140,8 @@ class _TodayScreenState extends State<TodayScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              if (dDayText != null && dDayColor != null) _buildDdayChip(dDayText, dDayColor),
+              if (dDayText != null && dDayColor != null)
+                _buildDdayChip(dDayText, dDayColor),
               if (plan.isCompleted) ...[
                 if (dDayText != null) const SizedBox(height: 6),
                 _buildMetaChip(
@@ -1302,7 +1160,9 @@ class _TodayScreenState extends State<TodayScreen> {
 
   Widget _buildMonthlyPlanTileMinimal(BuildContext context, MonthlyPlan plan) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final accentColor = plan.isCompleted
+        ? colorScheme.tertiary
+        : colorScheme.primary;
     final backgroundColor = plan.isCompleted
         ? colorScheme.tertiaryContainer.withAlpha(110)
         : colorScheme.surfaceVariant.withAlpha(60);
@@ -1318,7 +1178,9 @@ class _TodayScreenState extends State<TodayScreen> {
       child: Row(
         children: [
           Icon(
-            plan.isCompleted ? Icons.check_circle_rounded : Icons.flag_circle_rounded,
+            plan.isCompleted
+                ? Icons.check_circle_rounded
+                : Icons.flag_circle_rounded,
             size: 18,
             color: accentColor,
           ),
@@ -1330,28 +1192,26 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   plan.title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    decoration: plan.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
                 ),
                 if (plan.subject.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     plan.subject,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
             ),
           ),
           if (plan.isCompleted)
-            Icon(
-              Icons.check_rounded,
-              color: accentColor,
-              size: 16,
-            ),
+            Icon(Icons.check_rounded, color: accentColor, size: 16),
         ],
       ),
     );
@@ -1363,9 +1223,12 @@ class _TodayScreenState extends State<TodayScreen> {
     FirestoreService firestoreService,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
-    final backgroundColor =
-        plan.isCompleted ? colorScheme.tertiaryContainer.withAlpha(90) : colorScheme.surface;
+    final accentColor = plan.isCompleted
+        ? colorScheme.tertiary
+        : colorScheme.primary;
+    final backgroundColor = plan.isCompleted
+        ? colorScheme.tertiaryContainer.withAlpha(90)
+        : colorScheme.surface;
 
     return Material(
       color: Colors.transparent,
@@ -1393,9 +1256,9 @@ class _TodayScreenState extends State<TodayScreen> {
                 Text(
                   '${plan.startTime} ~ ${plan.endTime}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: accentColor,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1405,28 +1268,25 @@ class _TodayScreenState extends State<TodayScreen> {
                       Text(
                         plan.title,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
-                            ),
+                          fontWeight: FontWeight.w700,
+                          decoration: plan.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
                       ),
                       if (plan.subject.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           plan.subject,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ],
                   ),
                 ),
                 if (plan.isCompleted)
-                  Icon(
-                    Icons.check_rounded,
-                    color: accentColor,
-                    size: 16,
-                  ),
+                  Icon(Icons.check_rounded, color: accentColor, size: 16),
               ],
             ),
           ),
@@ -1434,6 +1294,7 @@ class _TodayScreenState extends State<TodayScreen> {
       ),
     );
   }
+
   Widget _buildDdayChip(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1459,12 +1320,17 @@ class _TodayScreenState extends State<TodayScreen> {
     FirestoreService firestoreService,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
-    final backgroundColor =
-        plan.isCompleted ? colorScheme.tertiaryContainer.withAlpha(120) : colorScheme.surface;
+    final accentColor = plan.isCompleted
+        ? colorScheme.tertiary
+        : colorScheme.primary;
+    final backgroundColor = plan.isCompleted
+        ? colorScheme.tertiaryContainer.withAlpha(120)
+        : colorScheme.surface;
     final completedSubtasks = plan.subtasks.where((s) => s.isCompleted).length;
     final totalSubtasks = plan.subtasks.length;
-    final subtaskProgress = totalSubtasks == 0 ? 0.0 : completedSubtasks / totalSubtasks;
+    final subtaskProgress = totalSubtasks == 0
+        ? 0.0
+        : completedSubtasks / totalSubtasks;
     final metaChips = <Widget>[];
 
     if (plan.subject.isNotEmpty) {
@@ -1520,7 +1386,10 @@ class _TodayScreenState extends State<TodayScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: accentColor.withAlpha(20),
                     borderRadius: BorderRadius.circular(12),
@@ -1562,9 +1431,12 @@ class _TodayScreenState extends State<TodayScreen> {
                           Expanded(
                             child: Text(
                               plan.title,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                                    decoration: plan.isCompleted
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
                             ),
                           ),
@@ -1579,19 +1451,14 @@ class _TodayScreenState extends State<TodayScreen> {
                       ),
                       if (metaChips.isNotEmpty) ...[
                         const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: metaChips,
-                        ),
+                        Wrap(spacing: 6, runSpacing: 6, children: metaChips),
                       ],
                       if (plan.notes.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
                           plan.notes,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colorScheme.onSurfaceVariant),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1600,11 +1467,16 @@ class _TodayScreenState extends State<TodayScreen> {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Icon(Icons.checklist, size: 14, color: colorScheme.onSurfaceVariant),
+                            Icon(
+                              Icons.checklist,
+                              size: 14,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '$completedSubtasks/$totalSubtasks 완료',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1612,9 +1484,8 @@ class _TodayScreenState extends State<TodayScreen> {
                             const Spacer(),
                             Text(
                               '${(subtaskProgress * 100).toStringAsFixed(0)}%',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
@@ -1630,7 +1501,9 @@ class _TodayScreenState extends State<TodayScreen> {
                                 value: value,
                                 minHeight: 5,
                                 backgroundColor: colorScheme.surfaceVariant,
-                                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  accentColor,
+                                ),
                               ),
                             );
                           },
@@ -1678,19 +1551,15 @@ class _TodayScreenState extends State<TodayScreen> {
               color: colorScheme.surface,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 28,
-              color: colorScheme.onSurfaceVariant,
-            ),
+            child: Icon(icon, size: 28, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 10),
           Text(
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           if (exampleTitle != null) ...[
             const SizedBox(height: 12),
@@ -1700,22 +1569,26 @@ class _TodayScreenState extends State<TodayScreen> {
               decoration: BoxDecoration(
                 color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colorScheme.outlineVariant.withAlpha(80)),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withAlpha(80),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     exampleTitle,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (exampleSubtitle != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       exampleSubtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ],

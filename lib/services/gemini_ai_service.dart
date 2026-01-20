@@ -5,10 +5,12 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 class GeminiAIService {
   static const String _primaryModel = 'gemini-1.5-flash-latest';
   static const String _fallbackModel = 'gemini-1.0-pro';
-  static const RequestOptions _primaryRequestOptions =
-      RequestOptions(apiVersion: 'v1');
-  static const RequestOptions _fallbackRequestOptions =
-      RequestOptions(apiVersion: 'v1beta');
+  static const RequestOptions _primaryRequestOptions = RequestOptions(
+    apiVersion: 'v1',
+  );
+  static const RequestOptions _fallbackRequestOptions = RequestOptions(
+    apiVersion: 'v1beta',
+  );
 
   GenerativeModel? _model;
   ChatSession? _chat;
@@ -61,10 +63,11 @@ class GeminiAIService {
 '''),
       );
 
-      _chat = _model!.startChat(history: [
-        Content.text('안녕하세요! 👋'),
-        Content.model([
-          TextPart(
+      _chat = _model!.startChat(
+        history: [
+          Content.text('안녕하세요! 👋'),
+          Content.model([
+            TextPart(
               '안녕하세요! 저는 학습 플래너 AI 어시스턴트입니다.\n\n'
               '다음과 같은 기능을 도와드릴 수 있어요:\n'
               '• 일정 추가/조회\n'
@@ -75,16 +78,21 @@ class GeminiAIService {
               '• 할일 관리\n'
               '• 검색\n'
               '• 공부 팁 추천\n\n'
-              '무엇을 도와드릴까요?')
-        ]),
-      ]);
+              '무엇을 도와드릴까요?',
+            ),
+          ]),
+        ],
+      );
     } catch (e) {
       print('❌ Gemini 모델 초기화 실패: $e');
     }
   }
 
   /// 사용자 메시지 처리 및 응답 생성
-  Future<String> processMessage(String message, {bool allowRetry = true}) async {
+  Future<String> processMessage(
+    String message, {
+    bool allowRetry = true,
+  }) async {
     if (_chat == null || _model == null) {
       return '❌ Gemini AI가 초기화되지 않았습니다. API 키를 확인해주세요.';
     }
@@ -115,18 +123,17 @@ class GeminiAIService {
   }
 
   /// 사용자 의도 파싱 (명령어 추출)
-  Future<Map<String, dynamic>> parseUserIntent(String message,
-      {bool allowRetry = true}) async {
+  Future<Map<String, dynamic>> parseUserIntent(
+    String message, {
+    bool allowRetry = true,
+  }) async {
     if (_chat == null || _model == null) {
-      return {
-        'action': 'chat',
-        'parameters': {},
-        'confidence': 0.0,
-      };
+      return {'action': 'chat', 'parameters': {}, 'confidence': 0.0};
     }
 
     try {
-      final prompt = '''
+      final prompt =
+          '''
 사용자 메시지를 분석하여 의도를 파악하세요.
 
 메시지: "$message"
@@ -170,11 +177,7 @@ class GeminiAIService {
       final text = response.text;
 
       if (text == null || text.isEmpty) {
-        return {
-          'action': 'chat',
-          'parameters': {},
-          'confidence': 0.5,
-        };
+        return {'action': 'chat', 'parameters': {}, 'confidence': 0.5};
       }
 
       // JSON 파싱
@@ -193,11 +196,7 @@ class GeminiAIService {
         _initializeModel(useFallback: true);
         return await parseUserIntent(message, allowRetry: false);
       }
-      return {
-        'action': 'chat',
-        'parameters': {},
-        'confidence': 0.0,
-      };
+      return {'action': 'chat', 'parameters': {}, 'confidence': 0.0};
     }
   }
 
@@ -205,8 +204,9 @@ class GeminiAIService {
     try {
       // 간단한 JSON 파싱 (dart:convert 사용하지 않고)
       final actionMatch = RegExp(r'"action":\s*"([^"]+)"').firstMatch(text);
-      final confidenceMatch =
-          RegExp(r'"confidence":\s*([0-9.]+)').firstMatch(text);
+      final confidenceMatch = RegExp(
+        r'"confidence":\s*([0-9.]+)',
+      ).firstMatch(text);
 
       final action = actionMatch?.group(1) ?? 'chat';
       final confidence =
@@ -245,8 +245,9 @@ class GeminiAIService {
       }
 
       // description 추출
-      final descriptionMatch =
-          RegExp(r'"description":\s*"([^"]+)"').firstMatch(text);
+      final descriptionMatch = RegExp(
+        r'"description":\s*"([^"]+)"',
+      ).firstMatch(text);
       if (descriptionMatch != null) {
         parameters['description'] = descriptionMatch.group(1);
       }
@@ -294,7 +295,8 @@ class GeminiAIService {
       }
 
       // target 추출 (목표 시간)
-      final targetMatch = RegExp(r'"target":\s*"([^"]+)"').firstMatch(text) ??
+      final targetMatch =
+          RegExp(r'"target":\s*"([^"]+)"').firstMatch(text) ??
           RegExp(r'"target":\s*([0-9.]+)').firstMatch(text);
       if (targetMatch != null) {
         parameters['target'] = targetMatch.group(1);
@@ -313,10 +315,10 @@ class GeminiAIService {
       }
 
       // action 추출 (manage_todo용)
-      final actionParamMatch =
-          RegExp(r'"action":\s*"([^"]+)"', multiLine: true)
-              .allMatches(text)
-              .toList();
+      final actionParamMatch = RegExp(
+        r'"action":\s*"([^"]+)"',
+        multiLine: true,
+      ).allMatches(text).toList();
       if (actionParamMatch.length > 1) {
         parameters['action'] = actionParamMatch[1].group(1);
       }
@@ -328,11 +330,7 @@ class GeminiAIService {
       };
     } catch (e) {
       print('❌ JSON 파싱 실패: $e');
-      return {
-        'action': 'chat',
-        'parameters': {},
-        'confidence': 0.0,
-      };
+      return {'action': 'chat', 'parameters': {}, 'confidence': 0.0};
     }
   }
 

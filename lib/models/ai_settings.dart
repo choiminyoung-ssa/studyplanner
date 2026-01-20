@@ -5,16 +5,16 @@ class AISettings {
   final String? geminiApiKey;
   final String? groqApiKey;
 
-  const AISettings({
-    required this.mode,
-    this.geminiApiKey,
-    this.groqApiKey,
-  });
+  const AISettings({required this.mode, this.geminiApiKey, this.groqApiKey});
 
-  /// 기본 설정 (Local AI)
+  /// 기본 설정 (Gemini AI)
   factory AISettings.defaultSettings() {
-    return const AISettings(
-      mode: AIMode.local,
+    return AISettings(
+      mode: AIMode.gemini,
+      geminiApiKey:
+          'AIzaSyD7Q24Q040000000000000000000000000', // 내장된 Gemini API 키
+      groqApiKey:
+          'gsk_0000000000000000000000000000000000000000000000000000', // 내장된 Groq API 키
     );
   }
 
@@ -55,23 +55,21 @@ class AISettings {
   /// Gemini 모드 사용 가능 여부 확인
   bool get canUseGemini {
     return mode == AIMode.gemini &&
-           geminiApiKey != null &&
-           geminiApiKey!.isNotEmpty;
+        geminiApiKey != null &&
+        geminiApiKey!.isNotEmpty;
   }
 
   /// Groq 모드 사용 가능 여부 확인
   bool get canUseGroq {
-    return mode == AIMode.groq &&
-           groqApiKey != null &&
-           groqApiKey!.isNotEmpty;
+    return mode == AIMode.groq && groqApiKey != null && groqApiKey!.isNotEmpty;
   }
 }
 
 /// AI 모드 열거형
 enum AIMode {
-  gemini,  // Google Gemini API (클라우드, API 키 필요, 고품질)
-  groq,    // Groq API (클라우드, API 키 필요, 초고속)
-  local,   // 로컬 패턴 매칭 (무료, API 키 불필요, 오프라인)
+  gemini, // Google Gemini API (클라우드, API 키 필요, 고품질)
+  groq, // Groq API (클라우드, API 키 필요, 초고속)
+  local, // 로컬 패턴 매칭 (무료, API 키 불필요, 오프라인)
 }
 
 /// AI 모드 확장 메서드

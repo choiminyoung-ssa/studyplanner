@@ -62,15 +62,12 @@ class GroqAIService {
   /// 사용자 의도 파싱 (명령어 추출)
   Future<Map<String, dynamic>> parseUserIntent(String message) async {
     if (apiKey.trim().isEmpty) {
-      return {
-        'action': 'chat',
-        'parameters': {},
-        'confidence': 0.0,
-      };
+      return {'action': 'chat', 'parameters': {}, 'confidence': 0.0};
     }
 
     try {
-      final prompt = '''
+      final prompt =
+          '''
 사용자 메시지를 분석하여 의도를 파악하세요.
 
 메시지: "$message"
@@ -124,11 +121,7 @@ class GroqAIService {
       );
 
       if (response == null || response.isEmpty) {
-        return {
-          'action': 'chat',
-          'parameters': {},
-          'confidence': 0.5,
-        };
+        return {'action': 'chat', 'parameters': {}, 'confidence': 0.5};
       }
 
       final cleanedText = response
@@ -141,11 +134,7 @@ class GroqAIService {
       return json;
     } catch (e) {
       print('❌ Groq Intent 파싱 오류: $e');
-      return {
-        'action': 'chat',
-        'parameters': {},
-        'confidence': 0.0,
-      };
+      return {'action': 'chat', 'parameters': {}, 'confidence': 0.0};
     }
   }
 
@@ -183,8 +172,7 @@ class GroqAIService {
       }
 
       final message = choices.first as Map<String, dynamic>;
-      final content =
-          (message['message'] as Map<String, dynamic>?)?['content'];
+      final content = (message['message'] as Map<String, dynamic>?)?['content'];
       return content?.toString().trim();
     } catch (e) {
       print('❌ Groq 요청 실패: $e');
@@ -195,8 +183,9 @@ class GroqAIService {
   Map<String, dynamic> _parseJson(String text) {
     try {
       final actionMatch = RegExp(r'"action":\s*"([^"]+)"').firstMatch(text);
-      final confidenceMatch =
-          RegExp(r'"confidence":\s*([0-9.]+)').firstMatch(text);
+      final confidenceMatch = RegExp(
+        r'"confidence":\s*([0-9.]+)',
+      ).firstMatch(text);
 
       final action = actionMatch?.group(1) ?? 'chat';
       final confidence =
@@ -219,7 +208,9 @@ class GroqAIService {
         parameters['duration'] = durationMatch.group(1);
       }
 
-      final materialsMatch = RegExp(r'"materials":\s*\[([^\]]+)\]').firstMatch(text);
+      final materialsMatch = RegExp(
+        r'"materials":\s*\[([^\]]+)\]',
+      ).firstMatch(text);
       if (materialsMatch != null) {
         final materialsText = materialsMatch.group(1) ?? '';
         final materials = materialsText
@@ -247,8 +238,9 @@ class GroqAIService {
         parameters['keyword'] = keywordMatch.group(1);
       }
 
-      final descriptionMatch =
-          RegExp(r'"description":\s*"([^"]+)"').firstMatch(text);
+      final descriptionMatch = RegExp(
+        r'"description":\s*"([^"]+)"',
+      ).firstMatch(text);
       if (descriptionMatch != null) {
         parameters['description'] = descriptionMatch.group(1);
       }
@@ -288,7 +280,8 @@ class GroqAIService {
         parameters['month'] = monthMatch.group(1);
       }
 
-      final targetMatch = RegExp(r'"target":\s*"([^"]+)"').firstMatch(text) ??
+      final targetMatch =
+          RegExp(r'"target":\s*"([^"]+)"').firstMatch(text) ??
           RegExp(r'"target":\s*([0-9.]+)').firstMatch(text);
       if (targetMatch != null) {
         parameters['target'] = targetMatch.group(1);
@@ -304,10 +297,10 @@ class GroqAIService {
         parameters['plan'] = planMatch.group(1);
       }
 
-      final actionParamMatch =
-          RegExp(r'"action":\s*"([^"]+)"', multiLine: true)
-              .allMatches(text)
-              .toList();
+      final actionParamMatch = RegExp(
+        r'"action":\s*"([^"]+)"',
+        multiLine: true,
+      ).allMatches(text).toList();
       if (actionParamMatch.length > 1) {
         parameters['action'] = actionParamMatch[1].group(1);
       }
@@ -319,11 +312,7 @@ class GroqAIService {
       };
     } catch (e) {
       print('❌ Groq JSON 파싱 실패: $e');
-      return {
-        'action': 'chat',
-        'parameters': {},
-        'confidence': 0.0,
-      };
+      return {'action': 'chat', 'parameters': {}, 'confidence': 0.0};
     }
   }
 

@@ -28,15 +28,18 @@ class CommandHandlerService {
       }
 
       final subjectInput = parameters['subject']?.toString().trim();
-      final subject =
-          subjectInput == null || subjectInput.isEmpty ? '새 일정' : subjectInput;
+      final subject = subjectInput == null || subjectInput.isEmpty
+          ? '새 일정'
+          : subjectInput;
       final timeStr = parameters['time']?.toString().trim() ?? '';
       final durationStr = parameters['duration']?.toString().trim() ?? '';
       final materials = parameters['materials'] is List<dynamic>
           ? List<String>.from(parameters['materials'])
           : <String>[];
 
-      print('📝 DEBUG: subject = $subject, timeStr = $timeStr, duration = $durationStr');
+      print(
+        '📝 DEBUG: subject = $subject, timeStr = $timeStr, duration = $durationStr',
+      );
 
       final scheduleDateTime = _parseScheduleDateTime(timeStr);
       final scheduleDate = DateTime(
@@ -45,9 +48,14 @@ class CommandHandlerService {
         scheduleDateTime.day,
       );
       final startTimeStr = DateHelper.toTimeString(scheduleDateTime);
-      final endTimeStr = _resolveEndTimeStringWithDuration(scheduleDateTime, durationStr);
+      final endTimeStr = _resolveEndTimeStringWithDuration(
+        scheduleDateTime,
+        durationStr,
+      );
 
-      print('📅 DEBUG: Final scheduleDateTime = $scheduleDateTime, endTime = $endTimeStr');
+      print(
+        '📅 DEBUG: Final scheduleDateTime = $scheduleDateTime, endTime = $endTimeStr',
+      );
 
       final newPlan = DailyPlan(
         id: '',
@@ -65,9 +73,10 @@ class CommandHandlerService {
       final docId = await _firestoreService.createDailyPlan(newPlan);
       print('✅ DEBUG: Saved daily plan ID: $docId');
 
-      final dateStr = DateFormat('M월 d일 (E) a h:mm', 'ko_KR').format(
-        DateHelper.timeStringToDateTime(startTimeStr, scheduleDate),
-      );
+      final dateStr = DateFormat(
+        'M월 d일 (E) a h:mm',
+        'ko_KR',
+      ).format(DateHelper.timeStringToDateTime(startTimeStr, scheduleDate));
       return '✅ "$subject" 일정이 $dateStr에 추가되었습니다!';
     } catch (e) {
       print('❌ DEBUG: Error creating schedule: $e');
@@ -92,20 +101,23 @@ class CommandHandlerService {
       }
 
       final showDate =
-          !(period.toString().contains('오늘') || period.toString().contains('내일'));
+          !(period.toString().contains('오늘') ||
+              period.toString().contains('내일'));
       final formatter = DateFormat(
         showDate ? 'M/d (E) a h:mm' : 'a h:mm',
         'ko_KR',
       );
 
-      final schedules = plans.map((plan) {
-        final startDateTime = DateHelper.timeStringToDateTime(
-          plan.startTime,
-          plan.date,
-        );
-        final timeStr = formatter.format(startDateTime);
-        return '• $timeStr - ${plan.title}';
-      }).join('\n');
+      final schedules = plans
+          .map((plan) {
+            final startDateTime = DateHelper.timeStringToDateTime(
+              plan.startTime,
+              plan.date,
+            );
+            final timeStr = formatter.format(startDateTime);
+            return '• $timeStr - ${plan.title}';
+          })
+          .join('\n');
 
       return '📅 $period 일정:\n\n$schedules';
     } catch (e) {
@@ -159,27 +171,36 @@ class CommandHandlerService {
         final now = DateTime.now();
         final dateRange = _DateRange(
           start: DateTime(now.year, now.month, now.day),
-          end: DateTime(now.year, now.month, now.day).add(const Duration(days: 7)),
+          end: DateTime(
+            now.year,
+            now.month,
+            now.day,
+          ).add(const Duration(days: 7)),
         );
         final plans = await _firestoreService.getDailyPlansByDateRange(
           userId,
           dateRange.start,
           dateRange.end,
         );
-        final todos = plans.where((plan) => !plan.isCompleted).take(10).toList();
+        final todos = plans
+            .where((plan) => !plan.isCompleted)
+            .take(10)
+            .toList();
 
         if (todos.isEmpty) {
           return '✅ 완료되지 않은 할일이 없습니다!';
         }
 
         final formatter = DateFormat('M/d (E) a h:mm', 'ko_KR');
-        final todoLines = todos.map((plan) {
-          final start = DateHelper.timeStringToDateTime(
-            plan.startTime,
-            plan.date,
-          );
-          return '• ${formatter.format(start)} - ${plan.title}';
-        }).join('\n');
+        final todoLines = todos
+            .map((plan) {
+              final start = DateHelper.timeStringToDateTime(
+                plan.startTime,
+                plan.date,
+              );
+              return '• ${formatter.format(start)} - ${plan.title}';
+            })
+            .join('\n');
 
         return '📝 할일 목록:\n\n$todoLines';
       }
@@ -201,10 +222,16 @@ class CommandHandlerService {
 
       final now = DateTime.now();
       final dateRange = _DateRange(
-        start: DateTime(now.year, now.month, now.day)
-            .subtract(const Duration(days: 30)),
-        end: DateTime(now.year, now.month, now.day)
-            .add(const Duration(days: 30)),
+        start: DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 30)),
+        end: DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).add(const Duration(days: 30)),
       );
       final plans = await _firestoreService.getDailyPlansByDateRange(
         userId,
@@ -225,14 +252,20 @@ class CommandHandlerService {
         return '🔍 "$keyword" 관련 일정을 찾을 수 없습니다.';
       }
 
-      final resultList = results.take(5).map((plan) {
-        final startTime = DateHelper.timeStringToDateTime(
-          plan.startTime,
-          plan.date,
-        );
-        final dateStr = DateFormat('M/d (E) a h:mm', 'ko_KR').format(startTime);
-        return '• ${plan.title} ($dateStr)';
-      }).join('\n');
+      final resultList = results
+          .take(5)
+          .map((plan) {
+            final startTime = DateHelper.timeStringToDateTime(
+              plan.startTime,
+              plan.date,
+            );
+            final dateStr = DateFormat(
+              'M/d (E) a h:mm',
+              'ko_KR',
+            ).format(startTime);
+            return '• ${plan.title} ($dateStr)';
+          })
+          .join('\n');
 
       return '🔍 "$keyword" 검색 결과 (${results.length}개):\n\n$resultList';
     } catch (e) {
@@ -249,8 +282,9 @@ class CommandHandlerService {
     } else if (timeStr.contains('내일')) {
       baseDate = baseDate.add(const Duration(days: 1));
     } else if (timeStr.contains('다음주')) {
-      final nextWeekStart =
-          DateHelper.getWeekStartDate(baseDate).add(const Duration(days: 7));
+      final nextWeekStart = DateHelper.getWeekStartDate(
+        baseDate,
+      ).add(const Duration(days: 7));
       final weekdayIndex = _extractWeekdayIndex(timeStr);
       baseDate = weekdayIndex == null
           ? nextWeekStart
@@ -266,20 +300,17 @@ class CommandHandlerService {
     int hour = 9;
     int minute = 0;
 
-    final colonMatch =
-        RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
+    final colonMatch = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
     if (colonMatch != null) {
       hour = int.parse(colonMatch.group(1)!);
       minute = int.parse(colonMatch.group(2)!);
     } else {
-      final hourMatch =
-          RegExp(r'(\d{1,2})\s*시').firstMatch(timeStr);
+      final hourMatch = RegExp(r'(\d{1,2})\s*시').firstMatch(timeStr);
       if (hourMatch != null) {
         hour = int.parse(hourMatch.group(1)!);
       }
 
-      final minuteMatch =
-          RegExp(r'(\d{1,2})\s*분').firstMatch(timeStr);
+      final minuteMatch = RegExp(r'(\d{1,2})\s*분').firstMatch(timeStr);
       if (minuteMatch != null) {
         minute = int.parse(minuteMatch.group(1)!);
       }
@@ -295,13 +326,7 @@ class CommandHandlerService {
       }
     }
 
-    return DateTime(
-      baseDate.year,
-      baseDate.month,
-      baseDate.day,
-      hour,
-      minute,
-    );
+    return DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
   }
 
   int? _extractWeekdayIndex(String text) {
@@ -332,7 +357,10 @@ class CommandHandlerService {
     return DateHelper.toTimeString(endDateTime);
   }
 
-  String _resolveEndTimeStringWithDuration(DateTime startDateTime, String durationStr) {
+  String _resolveEndTimeStringWithDuration(
+    DateTime startDateTime,
+    String durationStr,
+  ) {
     if (durationStr.isEmpty) {
       return _resolveEndTimeString(startDateTime);
     }
@@ -359,7 +387,9 @@ class CommandHandlerService {
     }
 
     // "2시간 30분" 형태
-    final hourMinuteMatch = RegExp(r'(\\d+)\\s*시간\\s*(\\d+)\\s*분').firstMatch(durationStr);
+    final hourMinuteMatch = RegExp(
+      r'(\\d+)\\s*시간\\s*(\\d+)\\s*분',
+    ).firstMatch(durationStr);
     if (hourMinuteMatch != null) {
       final hours = int.parse(hourMinuteMatch.group(1)!);
       final minutes = int.parse(hourMinuteMatch.group(2)!);
@@ -376,7 +406,11 @@ class CommandHandlerService {
     return 60;
   }
 
-  String _generateNotes(String subject, List<String> materials, String durationStr) {
+  String _generateNotes(
+    String subject,
+    List<String> materials,
+    String durationStr,
+  ) {
     if (materials.isEmpty && durationStr.isEmpty) {
       return 'AI 챗봇으로 생성된 일정';
     }
@@ -425,8 +459,9 @@ class CommandHandlerService {
     }
 
     if (period.contains('다음 주') || period.contains('다음주')) {
-      final start =
-          DateHelper.getWeekStartDate(today).add(const Duration(days: 7));
+      final start = DateHelper.getWeekStartDate(
+        today,
+      ).add(const Duration(days: 7));
       final end = DateHelper.getWeekEndDate(start);
       return _DateRange(start: start, end: end);
     }
@@ -454,13 +489,13 @@ class CommandHandlerService {
           .doc(userId)
           .collection('backlog_tasks')
           .add({
-        'title': subject,
-        'description': description,
-        'priority': 'medium', // 기본값
-        'isCompleted': false,
-        'createdAt': FieldValue.serverTimestamp(),
-        'source': 'chatbot', // 출처 표시
-      });
+            'title': subject,
+            'description': description,
+            'priority': 'medium', // 기본값
+            'isCompleted': false,
+            'createdAt': FieldValue.serverTimestamp(),
+            'source': 'chatbot', // 출처 표시
+          });
 
       print('✅ DEBUG: Added to backlog with ID: ${docRef.id}');
 
@@ -565,7 +600,8 @@ class CommandHandlerService {
 
       final weekStart = _parseWeekStart(parameters['week'] ?? '이번 주');
       final subject = parameters['subject']?.toString() ?? '';
-      final rawTitle = parameters['title'] ??
+      final rawTitle =
+          parameters['title'] ??
           parameters['goal'] ??
           parameters['plan'] ??
           subject;
@@ -603,7 +639,8 @@ class CommandHandlerService {
 
       final month = _parseMonth(parameters['month'] ?? '이번 달');
       final subject = parameters['subject']?.toString() ?? '';
-      final rawTitle = parameters['title'] ??
+      final rawTitle =
+          parameters['title'] ??
           parameters['goal'] ??
           parameters['plan'] ??
           subject;
@@ -649,22 +686,25 @@ class CommandHandlerService {
       final entries = parameters['entries'] ?? [];
 
       final timetableEntries = entries is List<dynamic>
-          ? entries.map((e) {
-              if (e is Map<String, dynamic>) {
-                return WeeklyTimetableEntry(
-                  id: '',
-                  userId: userId,
-                  weekday: _parseDayOfWeek(e['day'] ?? '월요일'),
-                  startTime: e['start_time'] ?? '09:00',
-                  endTime: e['end_time'] ?? '10:00',
-                  title: e['title'] ?? e['subject'] ?? '자유시간',
-                  location: e['location'],
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-              }
-              return null;
-            }).where((e) => e != null).cast<WeeklyTimetableEntry>()
+          ? entries
+                .map((e) {
+                  if (e is Map<String, dynamic>) {
+                    return WeeklyTimetableEntry(
+                      id: '',
+                      userId: userId,
+                      weekday: _parseDayOfWeek(e['day'] ?? '월요일'),
+                      startTime: e['start_time'] ?? '09:00',
+                      endTime: e['end_time'] ?? '10:00',
+                      title: e['title'] ?? e['subject'] ?? '자유시간',
+                      location: e['location'],
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
+                    );
+                  }
+                  return null;
+                })
+                .where((e) => e != null)
+                .cast<WeeklyTimetableEntry>()
           : <WeeklyTimetableEntry>[];
 
       for (final entry in timetableEntries) {
@@ -691,7 +731,8 @@ class CommandHandlerService {
       final planReminderEnabled =
           parameters['plan_reminder_enabled'] as bool? ?? true;
       final reminderMinutesBefore =
-          int.tryParse(parameters['reminder_minutes']?.toString() ?? '10') ?? 10;
+          int.tryParse(parameters['reminder_minutes']?.toString() ?? '10') ??
+          10;
       final eveningReviewEnabled =
           parameters['evening_review_enabled'] as bool? ?? true;
       final eveningReviewTime =

@@ -212,8 +212,7 @@ class UnifiedAIService {
           _settings.geminiApiKey!.isNotEmpty;
     }
     if (_settings.mode == AIMode.groq) {
-      return _settings.groqApiKey != null &&
-          _settings.groqApiKey!.isNotEmpty;
+      return _settings.groqApiKey != null && _settings.groqApiKey!.isNotEmpty;
     }
     return false;
   }
