@@ -66,8 +66,9 @@ dependencies:
   shared_preferences: ^2.2.3
   shared_preferences_web: ^2.4.3
 
-  # AI Chatbot (Local - No API Key Required)
-  # Using simple pattern matching instead of cloud AI
+  # AI Chatbot (Dual Mode: Gemini + Local)
+  # Supports both Google Gemini API and local pattern matching
+  google_generative_ai: ^0.4.6
 
 dev_dependencies:
   flutter_test:

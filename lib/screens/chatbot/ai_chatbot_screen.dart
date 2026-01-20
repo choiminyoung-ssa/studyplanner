@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/local_ai_service.dart';
+import '../../services/unified_ai_service.dart';
 import '../../services/command_handler_service.dart';
+import '../settings/ai_settings_screen.dart';
 
 class AIChatbotScreen extends StatefulWidget {
   const AIChatbotScreen({super.key});
@@ -16,7 +17,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
 
-  late LocalAIService _aiService;
+  late UnifiedAIService _aiService;
   late CommandHandlerService _commandHandler;
   bool _isLoading = false;
 
@@ -27,7 +28,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   }
 
   void _initializeServices() {
-    _aiService = LocalAIService();
+    _aiService = UnifiedAIService();
     final userId = context.read<AuthProvider>().user?.uid ?? '';
     _commandHandler = CommandHandlerService(userId: userId);
 
@@ -83,42 +84,69 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
       final intent = await _aiService.parseUserIntent(userMessage);
       String finalResponse = aiResponse;
 
-      // 높은 신뢰도의 명령어만 실행
-      if (intent['confidence'] > 0.7) {
+      // 더 낮은 신뢰도의 명령어도 실행 (0.6 이상)
+      print('🎯 DEBUG: intent = $intent');
+      print('📊 DEBUG: action = ${intent['action']}, confidence = ${intent['confidence']}');
+      
+      if (intent['confidence'] > 0.6) {
         String? commandResult;
 
-        switch (intent['action']) {
-          case 'create_schedule':
-            commandResult = await _commandHandler.createSchedule(
-              intent['parameters'],
-            );
-            break;
-          case 'view_schedule':
-            commandResult = await _commandHandler.viewSchedule(
-              intent['parameters'],
-            );
-            break;
-          case 'view_stats':
-            commandResult = await _commandHandler.viewStats(
-              intent['parameters'],
-            );
-            break;
-          case 'manage_todo':
-            commandResult = await _commandHandler.manageTodo(
-              intent['parameters'],
-            );
-            break;
-          case 'search':
-            commandResult = await _commandHandler.search(
-              intent['parameters'],
-            );
-            break;
-        }
+        print('🚀 DEBUG: Executing action: ${intent['action']}');
 
-        // 명령어 실행 결과가 있으면 추가
-        if (commandResult != null && commandResult.isNotEmpty) {
-          finalResponse = '$aiResponse\n\n━━━━━━━━━━━━━━\n\n$commandResult';
+        try {
+          switch (intent['action']) {
+            case 'create_schedule':
+              print('📅 DEBUG: Creating schedule...');
+              commandResult = await _commandHandler.createSchedule(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Schedule created: $commandResult');
+              break;
+            case 'view_schedule':
+              print('👁️ DEBUG: Viewing schedule...');
+              commandResult = await _commandHandler.viewSchedule(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Schedule viewed: $commandResult');
+              break;
+            case 'view_stats':
+              print('📊 DEBUG: Viewing stats...');
+              commandResult = await _commandHandler.viewStats(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Stats viewed: $commandResult');
+              break;
+            case 'manage_todo':
+              print('✅ DEBUG: Managing todo...');
+              commandResult = await _commandHandler.manageTodo(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Todo managed: $commandResult');
+              break;
+            case 'search':
+              print('🔍 DEBUG: Searching...');
+              commandResult = await _commandHandler.search(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Search done: $commandResult');
+              break;
+            default:
+              print('⚠️ DEBUG: Unknown action: ${intent['action']}');
+          }
+
+          // 명령어 실행 결과가 있으면 추가
+          if (commandResult != null && commandResult.isNotEmpty) {
+            finalResponse = '$aiResponse\n\n━━━━━━━━━━━━━━\n\n$commandResult';
+            print('✅ DEBUG: Final response prepared');
+          } else {
+            print('⚠️ DEBUG: Command result is empty or null');
+          }
+        } catch (e) {
+          print('❌ DEBUG: Error during command execution: $e');
+          finalResponse = '$aiResponse\n\n⚠️ 명령어 실행 중 오류: ${e.toString()}';
         }
+      } else {
+        print('⚠️ DEBUG: Confidence too low (${intent['confidence']}), skipping command execution');
       }
 
       setState(() {
@@ -181,22 +209,40 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'AI 어시스턴트',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '로컬 AI (API 키 불필요)',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
+                  '${_aiService.currentAIIcon} ${_aiService.currentAIName}',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
                 ),
               ],
             ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'AI 설정',
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AISettingsScreen(aiService: _aiService),
+                ),
+              );
+              // 설정이 변경되었으면 화면 새로고침
+              if (result == true) {
+                setState(() {
+                  _aiService.resetChat();
+                });
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.help_outline_rounded),
             tooltip: '도움말',
@@ -243,7 +289,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '💡 완전 무료! API 키나 계정이 필요 없습니다',
+                    _aiService.currentMode.name == 'gemini'
+                        ? '🤖 Gemini AI 사용 중 (고품질 응답)'
+                        : '💡 완전 무료! API 키나 계정이 필요 없습니다',
                     style: TextStyle(
                       fontSize: 13,
                       color: isDark ? Colors.blue[100] : Colors.blue[900],

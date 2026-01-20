@@ -7,30 +7,60 @@ class CommandHandlerService {
 
   CommandHandlerService({required this.userId});
 
-  /// 일정 생성 명령 처리
+  /// 일정 생성 명령 처리 - 개선된 버전
   Future<String> createSchedule(Map<String, dynamic> parameters) async {
     try {
+      print('🔍 DEBUG: createSchedule() called');
+      print('🔍 DEBUG: userId = $userId');
+      print('🔍 DEBUG: parameters = $parameters');
+      
       final subject = parameters['subject'] ?? '새 일정';
       final timeStr = parameters['time'] ?? '';
 
-      // 간단한 시간 파싱 (실제로는 더 정교한 파싱 필요)
+      print('📝 DEBUG: subject = $subject, timeStr = $timeStr');
+
+      // 더 정교한 날짜 파싱
       DateTime scheduleDate = DateTime.now();
-      if (timeStr.contains('내일')) {
-        scheduleDate = scheduleDate.add(const Duration(days: 1));
-      } else if (timeStr.contains('모레')) {
+      
+      if (timeStr.contains('모레')) {
         scheduleDate = scheduleDate.add(const Duration(days: 2));
+      } else if (timeStr.contains('내일')) {
+        scheduleDate = scheduleDate.add(const Duration(days: 1));
+      } else if (timeStr.contains('다음주')) {
+        // 다음주의 월요일
+        int daysUntilMonday = (8 - scheduleDate.weekday) % 7;
+        scheduleDate = scheduleDate.add(Duration(days: daysUntilMonday + 1));
       }
 
-      // 시간 파싱 (예: "15:00", "3시")
-      int hour = 9; // 기본값
-      if (timeStr.contains('시')) {
+      // 더 정교한 시간 파싱
+      int hour = 9; // 기본값 (오전 9시)
+      int minute = 0;
+
+      // "오후 3시", "3시" 형식 지원
+      if (timeStr.contains('오후')) {
+        final match = RegExp(r'오후\s*(\d+)시').firstMatch(timeStr);
+        if (match != null) {
+          hour = int.parse(match.group(1)!) + 12; // 오후는 +12
+        }
+      } else if (timeStr.contains('아침') || timeStr.contains('오전')) {
         final match = RegExp(r'(\d+)시').firstMatch(timeStr);
         if (match != null) {
           hour = int.parse(match.group(1)!);
         }
-      } else if (timeStr.contains(':')) {
-        final parts = timeStr.split(':');
-        hour = int.parse(parts[0].replaceAll(RegExp(r'[^0-9]'), ''));
+      } else if (timeStr.contains('시')) {
+        final match = RegExp(r'(\d+)시').firstMatch(timeStr);
+        if (match != null) {
+          hour = int.parse(match.group(1)!);
+        }
+      }
+
+      // "시간" 또는 ":" 형식도 지원
+      if (timeStr.contains(':')) {
+        final match = RegExp(r'(\d+):(\d+)').firstMatch(timeStr);
+        if (match != null) {
+          hour = int.parse(match.group(1)!);
+          minute = int.parse(match.group(2)!);
+        }
       }
 
       scheduleDate = DateTime(
@@ -38,10 +68,13 @@ class CommandHandlerService {
         scheduleDate.month,
         scheduleDate.day,
         hour,
+        minute,
       );
 
+      print('📅 DEBUG: Final scheduleDate = $scheduleDate');
+
       // Firestore에 일정 추가
-      await _firestore
+      final docRef = await _firestore
           .collection('users')
           .doc(userId)
           .collection('schedules')
@@ -55,9 +88,13 @@ class CommandHandlerService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      print('✅ DEBUG: Saved to Firestore with ID: ${docRef.id}');
+
       final dateStr = DateFormat('M월 d일 (E) a h시', 'ko_KR').format(scheduleDate);
       return '✅ "$subject" 일정이 $dateStr에 추가되었습니다!';
     } catch (e) {
+      print('❌ DEBUG: Error creating schedule: $e');
+      print('❌ DEBUG: Stack trace: ${e.toString()}');
       return '❌ 일정 생성 중 오류가 발생했습니다: ${e.toString()}';
     }
   }

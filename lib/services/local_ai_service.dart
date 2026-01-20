@@ -3,10 +3,14 @@
 /// 패턴 매칭과 규칙 기반으로 사용자 명령을 처리합니다.
 /// 클라우드 AI보다 간단하지만 API 키가 필요 없고 무료입니다.
 class LocalAIService {
+  // 이전 대화 컨텍스트 저장
+  String _previousContext = '';
+  String _previousSubject = '';
+
   /// 사용자 메시지를 분석하고 적절한 응답 생성
   Future<String> processMessage(String message) async {
     // 실제 AI처럼 약간의 지연 추가
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 300));
 
     final lowerMessage = message.toLowerCase();
 
@@ -67,10 +71,24 @@ class LocalAIService {
   }
 
   String _extractTime(String message) {
-    // 시간 추출 로직
-    if (message.contains('내일')) return '내일';
-    if (message.contains('모레')) return '모레';
-    if (message.contains('다음주')) return '다음 주';
+    // 날짜 추출 로직 (더 정교함)
+    final lowerMsg = message.toLowerCase();
+    
+    // 구체적인 날짜 패턴
+    if (lowerMsg.contains('다음주 월요일') || lowerMsg.contains('다음주 월')) return '다음주 월요일';
+    if (lowerMsg.contains('다음주 화요일') || lowerMsg.contains('다음주 화')) return '다음주 화요일';
+    if (lowerMsg.contains('다음주 수요일') || lowerMsg.contains('다음주 수')) return '다음주 수요일';
+    if (lowerMsg.contains('다음주 목요일') || lowerMsg.contains('다음주 목')) return '다음주 목요일';
+    if (lowerMsg.contains('다음주 금요일') || lowerMsg.contains('다음주 금')) return '다음주 금요일';
+    if (lowerMsg.contains('다음주 토요일') || lowerMsg.contains('다음주 토')) return '다음주 토요일';
+    if (lowerMsg.contains('다음주 일요일') || lowerMsg.contains('다음주 일')) return '다음주 일요일';
+    
+    // 일반 날짜
+    if (lowerMsg.contains('모레')) return '모레';
+    if (lowerMsg.contains('내일')) return '내일';
+    if (lowerMsg.contains('이번주') || lowerMsg.contains('이번 주')) return '이번 주';
+    if (lowerMsg.contains('다음주') || lowerMsg.contains('다음 주')) return '다음 주';
+    
     return '오늘';
   }
 
@@ -98,12 +116,12 @@ class LocalAIService {
   String _createScheduleResponse(String message) {
     final time = _extractTime(message);
     final subject = _extractSubject(message);
+    _previousSubject = subject; // 컨텍스트 저장
 
-    return '📅 일정 추가 요청을 받았습니다!\n\n'
-        '• 과목: $subject\n'
-        '• 시간: $time\n\n'
-        '이 정보로 일정을 추가하시겠어요?\n'
-        '(명령어는 자동으로 처리됩니다)';
+    return '✅ "$subject" 일정 추가 준비 완료!\n\n'
+        '📅 날짜: $time\n'
+        '📚 과목: $subject\n\n'
+        '곧 Firestore에 저장됩니다! 🚀';
   }
 
   String _viewScheduleResponse(String message) {
@@ -205,59 +223,70 @@ class LocalAIService {
         '더 자세한 도움이 필요하시면 "도움말"이라고 말씀해주세요!';
   }
 
-  /// 사용자 의도 파싱 (명령어 추출)
+  /// 사용자 의도 파싱 (명령어 추출) - 개선된 버전
   Future<Map<String, dynamic>> parseUserIntent(String message) async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 200));
 
     final lowerMessage = message.toLowerCase();
+    print('🔍 DEBUG: parseUserIntent() - message: "$message"');
+    
     Map<String, dynamic> result = {
       'action': 'chat',
       'parameters': {},
       'confidence': 0.5,
     };
 
-    // 일정 생성
-    if (_containsAny(lowerMessage, ['일정', '스케줄']) &&
-        _containsAny(lowerMessage, ['추가', '생성', '만들', '등록'])) {
+    // 일정 생성 (더 많은 패턴 지원)
+    if ((_containsAny(lowerMessage, ['일정', '스케줄', '계획']) &&
+        _containsAny(lowerMessage, ['추가', '생성', '만들', '등록', '넣', '해야', '해야해', '공부'])) ||
+        (_containsAny(lowerMessage, ['내일', '모레', '다음주', '오후', '아침']) &&
+        _containsAny(lowerMessage, ['수학', '영어', '과학', '국어', '공부', '숙제', '과제']))) {
       result['action'] = 'create_schedule';
       result['parameters'] = {
         'subject': _extractSubject(message),
         'time': message,
       };
-      result['confidence'] = 0.9;
+      result['confidence'] = 0.92;
+      print('✅ DEBUG: Detected create_schedule with confidence 0.92');
     }
     // 일정 조회
-    else if (_containsAny(lowerMessage, ['일정', '스케줄']) &&
-        _containsAny(lowerMessage, ['보여', '알려', '확인', '조회'])) {
+    else if ((_containsAny(lowerMessage, ['일정', '스케줄']) &&
+        _containsAny(lowerMessage, ['보여', '알려', '확인', '조회', '뭐', '뭐야'])) ||
+        (_containsAny(lowerMessage, ['오늘', '내일', '이번주']) &&
+        _containsAny(lowerMessage, ['뭐', '뭐야', '뭐하', '일정']))) {
       result['action'] = 'view_schedule';
       result['parameters'] = {
         'date': message,
       };
-      result['confidence'] = 0.9;
+      result['confidence'] = 0.91;
+      print('✅ DEBUG: Detected view_schedule with confidence 0.91');
     }
     // 통계 조회
-    else if (_containsAny(lowerMessage, ['통계', '시간', '얼마'])) {
+    else if (_containsAny(lowerMessage, ['통계', '시간', '얼마', '공부']) &&
+        _containsAny(lowerMessage, ['얼마', '시간', '통계', '몇'])) {
       result['action'] = 'view_stats';
       result['parameters'] = {
         'period': message,
       };
-      result['confidence'] = 0.85;
+      result['confidence'] = 0.88;
+      print('✅ DEBUG: Detected view_stats with confidence 0.88');
     }
     // 할일 관리
-    else if (_containsAny(lowerMessage, ['할일', '과제', '숙제'])) {
+    else if (_containsAny(lowerMessage, ['할일', '할 일', '과제', '숙제', 'todo'])) {
       result['action'] = 'manage_todo';
       result['parameters'] = {
         'action': 'list',
       };
-      result['confidence'] = 0.85;
+      result['confidence'] = 0.87;
+      print('✅ DEBUG: Detected manage_todo with confidence 0.87');
     }
     // 검색
-    else if (_containsAny(lowerMessage, ['찾', '검색'])) {
+    else if (_containsAny(lowerMessage, ['찾', '검색', 'find', 'search'])) {
       final words = message.split(' ');
       String keyword = '';
       for (var word in words) {
         if (word.length > 1 &&
-            !['찾아', '검색', '해줘', '알려', '보여'].contains(word)) {
+            !['찾아', '검색', '해줘', '알려', '보여', '찾다'].contains(word)) {
           keyword = word;
           break;
         }
@@ -266,9 +295,11 @@ class LocalAIService {
       result['parameters'] = {
         'keyword': keyword,
       };
-      result['confidence'] = 0.8;
+      result['confidence'] = 0.83;
+      print('✅ DEBUG: Detected search with confidence 0.83');
     }
 
+    print('📊 DEBUG: Final result - action: ${result['action']}, confidence: ${result['confidence']}');
     return result;
   }
 }
