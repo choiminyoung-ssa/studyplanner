@@ -6,13 +6,40 @@ import '../../models/daily_plan.dart';
 import '../../models/weekly_plan.dart';
 import '../../models/monthly_plan.dart';
 import '../../utils/date_utils.dart';
+import '../../utils/today_view_storage.dart';
 import '../daily/completion_tracker_dialog.dart';
 import '../daily/daily_form_screen.dart';
 import '../weekly/weekly_form_screen.dart';
 import '../monthly/monthly_form_screen.dart';
 
-class TodayScreen extends StatelessWidget {
+class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
+
+  @override
+  State<TodayScreen> createState() => _TodayScreenState();
+}
+
+class _TodayScreenState extends State<TodayScreen> {
+  late final TodayViewStorage _viewStorage;
+  bool _minimalMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewStorage = createTodayViewStorage();
+    _loadMinimalMode();
+  }
+
+  Future<void> _loadMinimalMode() async {
+    final isMinimal = await _viewStorage.isMinimalMode();
+    if (!mounted) return;
+    setState(() => _minimalMode = isMinimal);
+  }
+
+  Future<void> _setMinimalMode(bool value) async {
+    setState(() => _minimalMode = value);
+    await _viewStorage.setMinimalMode(value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +56,25 @@ class TodayScreen extends StatelessWidget {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 1000;
         final maxWidth = isWide ? 1200.0 : 720.0;
-        final headerCard = _buildAnimatedEntry(_buildHeaderCard(context, today), delay: 0);
-        final flowCard = _buildAnimatedEntry(_buildFlowDiagramCard(context), delay: 40);
+        final headerCard = _buildAnimatedEntry(
+          _buildHeaderCard(
+            context,
+            today,
+            minimalMode: _minimalMode,
+            onToggleMinimal: _setMinimalMode,
+          ),
+          delay: 0,
+        );
+        final flowCard = _minimalMode
+            ? null
+            : _buildAnimatedEntry(_buildFlowDiagramCard(context), delay: 40);
         final todaySection = _buildAnimatedEntry(
           _buildTodayPlansSection(
             context,
             userId: userId,
             today: today,
             firestoreService: firestoreService,
+            minimalMode: _minimalMode,
           ),
           delay: 80,
         );
@@ -46,6 +84,7 @@ class TodayScreen extends StatelessWidget {
             userId: userId,
             today: today,
             firestoreService: firestoreService,
+            minimalMode: _minimalMode,
           ),
           delay: 160,
         );
@@ -55,9 +94,12 @@ class TodayScreen extends StatelessWidget {
             userId: userId,
             today: today,
             firestoreService: firestoreService,
+            minimalMode: _minimalMode,
           ),
           delay: 240,
         );
+        final gapSmall = _minimalMode ? 12.0 : 16.0;
+        final gapLarge = _minimalMode ? 16.0 : 20.0;
 
         return DecoratedBox(
           decoration: BoxDecoration(color: colorScheme.surface),
@@ -77,9 +119,11 @@ class TodayScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 headerCard,
-                                const SizedBox(height: 16),
-                                flowCard,
-                                const SizedBox(height: 20),
+                                SizedBox(height: gapSmall),
+                                if (flowCard != null) ...[
+                                  flowCard,
+                                  SizedBox(height: gapLarge),
+                                ],
                                 todaySection,
                               ],
                             ),
@@ -91,7 +135,7 @@ class TodayScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 weeklySection,
-                                const SizedBox(height: 20),
+                                SizedBox(height: gapLarge),
                                 monthlySection,
                               ],
                             ),
@@ -102,13 +146,15 @@ class TodayScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           headerCard,
-                          const SizedBox(height: 16),
-                          flowCard,
-                          const SizedBox(height: 20),
+                          SizedBox(height: gapSmall),
+                          if (flowCard != null) ...[
+                            flowCard,
+                            SizedBox(height: gapLarge),
+                          ],
                           todaySection,
-                          const SizedBox(height: 20),
+                          SizedBox(height: gapLarge),
                           weeklySection,
-                          const SizedBox(height: 20),
+                          SizedBox(height: gapLarge),
                           monthlySection,
                         ],
                       ),
@@ -149,11 +195,13 @@ class TodayScreen extends StatelessWidget {
     String? subtitle,
     Widget? trailing,
     required Widget child,
+    bool minimal = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
+    final padding = minimal ? 12.0 : 16.0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
@@ -173,10 +221,10 @@ class TodayScreen extends StatelessWidget {
             context,
             icon: icon,
             title: title,
-            subtitle: subtitle,
+            subtitle: minimal ? null : subtitle,
             trailing: trailing,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: minimal ? 8 : 12),
           child,
         ],
       ),
@@ -286,12 +334,14 @@ class TodayScreen extends StatelessWidget {
     required String userId,
     required DateTime today,
     required FirestoreService firestoreService,
+    bool minimalMode = false,
   }) {
     return _buildSectionCard(
       context,
       icon: Icons.today_rounded,
       title: '오늘의 일정',
       subtitle: '오늘 해야 할 일정',
+      minimal: minimalMode,
       child: StreamBuilder<List<DailyPlan>>(
         stream: firestoreService.getDailyPlans(userId, today),
         builder: (context, snapshot) {
@@ -315,9 +365,9 @@ class TodayScreen extends StatelessWidget {
                 context,
                 key: const ValueKey('daily-empty'),
                 icon: Icons.event_available,
-                message: '오늘 예정된 일정이 없습니다',
-                exampleTitle: '예시: 수학 문제집 1단원',
-                exampleSubtitle: '18:00 ~ 19:30 · 핵심 문제 풀이',
+                message: minimalMode ? '오늘 일정이 없습니다' : '오늘 예정된 일정이 없습니다',
+                exampleTitle: minimalMode ? null : '예시: 수학 문제집 1단원',
+                exampleSubtitle: minimalMode ? null : '18:00 ~ 19:30 · 핵심 문제 풀이',
                 actionLabel: '일정 추가',
                 onAction: () {
                   Navigator.push(
@@ -335,18 +385,22 @@ class TodayScreen extends StatelessWidget {
               content = Column(
                 key: const ValueKey('daily-list'),
                 children: [
-                  _buildProgressSummary(
-                    context,
-                    label: '오늘 진행률',
-                    completed: completedCount,
-                    total: totalCount,
-                    accentColor: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
+                  if (!minimalMode) ...[
+                    _buildProgressSummary(
+                      context,
+                      label: '오늘 진행률',
+                      completed: completedCount,
+                      total: totalCount,
+                      accentColor: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   ...dailyPlans.map(
                     (plan) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildDailyPlanCard(context, plan, firestoreService),
+                      child: minimalMode
+                          ? _buildDailyPlanCardMinimal(context, plan, firestoreService)
+                          : _buildDailyPlanCard(context, plan, firestoreService),
                     ),
                   ),
                 ],
@@ -370,12 +424,14 @@ class TodayScreen extends StatelessWidget {
     required String userId,
     required DateTime today,
     required FirestoreService firestoreService,
+    bool minimalMode = false,
   }) {
     return _buildSectionCard(
       context,
       icon: Icons.calendar_view_week_rounded,
       title: '이번 주 계획',
       subtitle: '이번 주 전체 일정',
+      minimal: minimalMode,
       child: StreamBuilder<List<WeeklyPlan>>(
         stream: firestoreService.getWeeklyPlansByDateRange(
           userId,
@@ -397,15 +453,18 @@ class TodayScreen extends StatelessWidget {
           } else {
             final weeklyPlans = snapshot.data ?? [];
             weeklyPlans.sort((a, b) => a.date.compareTo(b.date));
+            final filteredPlans = minimalMode
+                ? weeklyPlans.where((plan) => DateHelper.isSameDay(plan.date, today)).toList()
+                : weeklyPlans;
 
-            if (weeklyPlans.isEmpty) {
+            if (filteredPlans.isEmpty) {
               content = _buildEmptyStateCard(
                 context,
                 key: const ValueKey('weekly-empty'),
                 icon: Icons.calendar_today,
-                message: '이번 주 계획이 없습니다',
-                exampleTitle: '예시: 주간 수학 목표',
-                exampleSubtitle: '이번 주 총 5시간 확보',
+                message: minimalMode ? '오늘 주간 계획이 없습니다' : '이번 주 계획이 없습니다',
+                exampleTitle: minimalMode ? null : '예시: 주간 수학 목표',
+                exampleSubtitle: minimalMode ? null : '이번 주 총 5시간 확보',
                 actionLabel: '주간 계획 추가',
                 onAction: () {
                   Navigator.push(
@@ -424,7 +483,11 @@ class TodayScreen extends StatelessWidget {
               content = Column(
                 key: const ValueKey('weekly-list'),
                 children:
-                    weeklyPlans.map((plan) => _buildWeeklyPlanTile(context, plan)).toList(),
+                    filteredPlans.map((plan) {
+                      return minimalMode
+                          ? _buildWeeklyPlanTileMinimal(context, plan)
+                          : _buildWeeklyPlanTile(context, plan);
+                    }).toList(),
               );
             }
           }
@@ -445,12 +508,14 @@ class TodayScreen extends StatelessWidget {
     required String userId,
     required DateTime today,
     required FirestoreService firestoreService,
+    bool minimalMode = false,
   }) {
     return _buildSectionCard(
       context,
       icon: Icons.calendar_month_rounded,
       title: '이번 달 목표',
       subtitle: '이번 달 핵심 목표',
+      minimal: minimalMode,
       child: StreamBuilder<List<MonthlyPlan>>(
         stream: firestoreService.getMonthlyPlans(
           userId,
@@ -498,15 +563,21 @@ class TodayScreen extends StatelessWidget {
               content = Column(
                 key: const ValueKey('monthly-list'),
                 children: [
-                  _buildProgressSummary(
-                    context,
-                    label: '이번 달 진행률',
-                    completed: completedCount,
-                    total: totalCount,
-                    accentColor: Theme.of(context).colorScheme.tertiary,
-                  ),
-                  const SizedBox(height: 12),
-                  ...monthlyPlans.take(3).map((plan) => _buildMonthlyPlanTile(context, plan)),
+                  if (!minimalMode) ...[
+                    _buildProgressSummary(
+                      context,
+                      label: '이번 달 진행률',
+                      completed: completedCount,
+                      total: totalCount,
+                      accentColor: Theme.of(context).colorScheme.tertiary,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  ...monthlyPlans.take(3).map(
+                        (plan) => minimalMode
+                            ? _buildMonthlyPlanTileMinimal(context, plan)
+                            : _buildMonthlyPlanTile(context, plan),
+                      ),
                 ],
               );
             }
@@ -523,7 +594,12 @@ class TodayScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderCard(BuildContext context, DateTime today) {
+  Widget _buildHeaderCard(
+    BuildContext context,
+    DateTime today, {
+    required bool minimalMode,
+    required ValueChanged<bool> onToggleMinimal,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -573,26 +649,68 @@ class TodayScreen extends StatelessWidget {
                     color: colorScheme.onPrimaryContainer.withAlpha(160),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  '오늘의 루틴을 시작해요',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onPrimaryContainer.withAlpha(150),
+                if (!minimalMode) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '오늘의 루틴을 시작해요',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer.withAlpha(150),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              '오늘',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '오늘',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildMinimalToggle(context, minimalMode, onToggleMinimal),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMinimalToggle(
+    BuildContext context,
+    bool minimalMode,
+    ValueChanged<bool> onToggle,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '미니멀',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(width: 6),
+          Switch.adaptive(
+            value: minimalMode,
+            onChanged: onToggle,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
@@ -819,6 +937,63 @@ class TodayScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildWeeklyPlanTileMinimal(BuildContext context, WeeklyPlan plan) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final backgroundColor = plan.isCompleted
+        ? colorScheme.tertiaryContainer.withAlpha(120)
+        : colorScheme.surfaceVariant.withAlpha(60);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            plan.isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined,
+            size: 16,
+            color: accentColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  plan.title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                      ),
+                ),
+                if (plan.subject.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    plan.subject,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (plan.isCompleted)
+            Icon(
+              Icons.check_rounded,
+              color: accentColor,
+              size: 16,
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMonthlyPlanTile(BuildContext context, MonthlyPlan plan) {
     final colorScheme = Theme.of(context).colorScheme;
     final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
@@ -905,6 +1080,140 @@ class TodayScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildMonthlyPlanTileMinimal(BuildContext context, MonthlyPlan plan) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final backgroundColor = plan.isCompleted
+        ? colorScheme.tertiaryContainer.withAlpha(110)
+        : colorScheme.surfaceVariant.withAlpha(60);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accentColor.withAlpha(60)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            plan.isCompleted ? Icons.check_circle_rounded : Icons.flag_circle_rounded,
+            size: 18,
+            color: accentColor,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  plan.title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                      ),
+                ),
+                if (plan.subject.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    plan.subject,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (plan.isCompleted)
+            Icon(
+              Icons.check_rounded,
+              color: accentColor,
+              size: 16,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyPlanCardMinimal(
+    BuildContext context,
+    DailyPlan plan,
+    FirestoreService firestoreService,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = plan.isCompleted ? colorScheme.tertiary : colorScheme.primary;
+    final backgroundColor =
+        plan.isCompleted ? colorScheme.tertiaryContainer.withAlpha(90) : colorScheme.surface;
+
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accentColor.withAlpha(60)),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            showDialog(
+              context: context,
+              builder: (context) => CompletionTrackerDialog(
+                plan: plan,
+                firestoreService: firestoreService,
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Text(
+                  '${plan.startTime} ~ ${plan.endTime}',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: accentColor,
+                      ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plan.title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              decoration: plan.isCompleted ? TextDecoration.lineThrough : null,
+                            ),
+                      ),
+                      if (plan.subject.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          plan.subject,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (plan.isCompleted)
+                  Icon(
+                    Icons.check_rounded,
+                    color: accentColor,
+                    size: 16,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   Widget _buildDdayChip(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

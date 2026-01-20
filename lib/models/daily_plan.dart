@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'subtask.dart';
+import 'priority_matrix.dart';
 
 class DailyPlan {
   final String id;
@@ -21,6 +22,9 @@ class DailyPlan {
   final List<String> sessionIds; // 연결된 학습 세션 ID 목록
   final int totalStudiedSeconds; // 총 학습 시간 (초)
   final String? googleEventId; // Google Calendar 이벤트 ID
+  final Importance importance; // 중요도 (아이젠하워 매트릭스)
+  final Urgency urgency; // 긴급도 (아이젠하워 매트릭스)
+  final String? timetableVersionId; // 시간표 버전 ID
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -44,6 +48,9 @@ class DailyPlan {
     this.sessionIds = const [],
     this.totalStudiedSeconds = 0,
     this.googleEventId,
+    this.importance = Importance.high,
+    this.urgency = Urgency.high,
+    this.timetableVersionId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -79,6 +86,19 @@ class DailyPlan {
       sessionIds: List<String>.from(data['sessionIds'] ?? []),
       totalStudiedSeconds: data['totalStudiedSeconds'] ?? 0,
       googleEventId: data['googleEventId'],
+      importance: data['importance'] != null
+          ? Importance.values.firstWhere(
+              (e) => e.name == data['importance'],
+              orElse: () => Importance.high,
+            )
+          : Importance.high,
+      urgency: data['urgency'] != null
+          ? Urgency.values.firstWhere(
+              (e) => e.name == data['urgency'],
+              orElse: () => Urgency.high,
+            )
+          : Urgency.high,
+      timetableVersionId: data['timetableVersionId'],
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -104,9 +124,17 @@ class DailyPlan {
       'sessionIds': sessionIds,
       'totalStudiedSeconds': totalStudiedSeconds,
       'googleEventId': googleEventId,
+      'importance': importance.name,
+      'urgency': urgency.name,
+      'timetableVersionId': timetableVersionId,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
+  }
+
+  /// 아이젠하워 매트릭스 사분면 계산
+  Quadrant get quadrant {
+    return QuadrantExtension.fromPriority(importance, urgency);
   }
 
   DailyPlan copyWith({
@@ -129,6 +157,9 @@ class DailyPlan {
     List<String>? sessionIds,
     int? totalStudiedSeconds,
     String? googleEventId,
+    Importance? importance,
+    Urgency? urgency,
+    String? timetableVersionId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -152,6 +183,9 @@ class DailyPlan {
       sessionIds: sessionIds ?? this.sessionIds,
       totalStudiedSeconds: totalStudiedSeconds ?? this.totalStudiedSeconds,
       googleEventId: googleEventId ?? this.googleEventId,
+      importance: importance ?? this.importance,
+      urgency: urgency ?? this.urgency,
+      timetableVersionId: timetableVersionId ?? this.timetableVersionId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
