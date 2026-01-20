@@ -13,34 +13,48 @@ class AISettingsScreen extends StatefulWidget {
 
 class _AISettingsScreenState extends State<AISettingsScreen> {
   late AISettings _currentSettings;
-  final TextEditingController _apiKeyController = TextEditingController();
+  final TextEditingController _geminiKeyController = TextEditingController();
+  final TextEditingController _groqKeyController = TextEditingController();
   bool _isSaving = false;
-  bool _hasStoredKey = false;
+  bool _hasStoredGeminiKey = false;
+  bool _hasStoredGroqKey = false;
 
   @override
   void initState() {
     super.initState();
     _currentSettings = widget.aiService.currentSettings;
-    _hasStoredKey = _currentSettings.geminiApiKey?.trim().isNotEmpty ?? false;
-    _apiKeyController.clear();
+    _hasStoredGeminiKey =
+        _currentSettings.geminiApiKey?.trim().isNotEmpty ?? false;
+    _hasStoredGroqKey =
+        _currentSettings.groqApiKey?.trim().isNotEmpty ?? false;
+    _geminiKeyController.clear();
+    _groqKeyController.clear();
   }
 
   @override
   void dispose() {
-    _apiKeyController.dispose();
+    _geminiKeyController.dispose();
+    _groqKeyController.dispose();
     super.dispose();
   }
 
   Future<void> _saveSettings() async {
     setState(() => _isSaving = true);
 
-    final inputKey = _apiKeyController.text.trim();
-    final resolvedKey =
-        inputKey.isEmpty ? _currentSettings.geminiApiKey : inputKey;
+    final geminiInput = _geminiKeyController.text.trim();
+    final groqInput = _groqKeyController.text.trim();
+
+    final resolvedGeminiKey =
+        geminiInput.isEmpty ? _currentSettings.geminiApiKey : geminiInput;
+    final resolvedGroqKey =
+        groqInput.isEmpty ? _currentSettings.groqApiKey : groqInput;
 
     final newSettings = AISettings(
       mode: _currentSettings.mode,
-      geminiApiKey: resolvedKey?.trim().isEmpty == true ? null : resolvedKey,
+      geminiApiKey:
+          resolvedGeminiKey?.trim().isEmpty == true ? null : resolvedGeminiKey,
+      groqApiKey:
+          resolvedGroqKey?.trim().isEmpty == true ? null : resolvedGroqKey,
     );
 
     final success = await widget.aiService.updateSettings(newSettings);
@@ -51,7 +65,12 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
 
     if (success) {
       _currentSettings = newSettings;
-      _hasStoredKey = _currentSettings.geminiApiKey?.trim().isNotEmpty ?? false;
+      _hasStoredGeminiKey =
+          _currentSettings.geminiApiKey?.trim().isNotEmpty ?? false;
+      _hasStoredGroqKey =
+          _currentSettings.groqApiKey?.trim().isNotEmpty ?? false;
+      _geminiKeyController.clear();
+      _groqKeyController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ 설정이 저장되었습니다'),
@@ -157,6 +176,16 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
             ),
             const SizedBox(height: 12),
 
+            // Groq AI 옵션
+            _buildAIModeCard(
+              mode: AIMode.groq,
+              title: AIMode.groq.displayName,
+              description: AIMode.groq.description,
+              icon: AIMode.groq.icon,
+              isDark: isDark,
+            ),
+            const SizedBox(height: 12),
+
             // Local AI 옵션
             _buildAIModeCard(
               mode: AIMode.local,
@@ -177,7 +206,7 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                _hasStoredKey
+                _hasStoredGeminiKey
                     ? '저장된 키가 있습니다. 보안상 화면에 표시하지 않습니다.'
                     : 'Gemini API 키는 Google AI Studio에서 무료로 발급받을 수 있습니다.',
                 style: TextStyle(
@@ -188,19 +217,20 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
               const SizedBox(height: 16),
 
               TextField(
-                controller: _apiKeyController,
+                controller: _geminiKeyController,
                 obscureText: true,
                 style: const TextStyle(fontSize: 15),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: _hasStoredKey ? '새 API 키 입력' : 'AIza...',
+                  hintText:
+                      _hasStoredGeminiKey ? '새 API 키 입력' : 'AIza...',
                   prefixIcon: Icon(
                     Icons.key_rounded,
                     color: isDark
                         ? Colors.blue[400]
                         : Theme.of(context).colorScheme.primary,
                   ),
-                  suffixIcon: _apiKeyController.text.isNotEmpty
+                  suffixIcon: _geminiKeyController.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(
                             Icons.clear_rounded,
@@ -208,7 +238,7 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
                           ),
                           onPressed: () {
                             setState(() {
-                              _apiKeyController.clear();
+                              _geminiKeyController.clear();
                             });
                           },
                         )
@@ -279,6 +309,119 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
                         fontSize: 13,
                         height: 1.5,
                         color: isDark ? Colors.blue[100] : Colors.blue[900],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (_currentSettings.mode == AIMode.groq) ...[
+              Text(
+                'Groq API 키',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _hasStoredGroqKey
+                    ? '저장된 키가 있습니다. 보안상 화면에 표시하지 않습니다.'
+                    : 'Groq API 키는 Groq Cloud에서 발급받을 수 있습니다.',
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: _groqKeyController,
+                obscureText: true,
+                style: const TextStyle(fontSize: 15),
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: _hasStoredGroqKey ? '새 API 키 입력' : 'gsk_...',
+                  prefixIcon: Icon(
+                    Icons.key_rounded,
+                    color: isDark ? Colors.green[400] : Colors.green[700],
+                  ),
+                  suffixIcon: _groqKeyController.text.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear_rounded,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _groqKeyController.clear();
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.green[400]! : Colors.green[700]!,
+                      width: 2,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: isDark ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.green[900]!.withOpacity(0.2)
+                      : Colors.green[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? Colors.green[700]! : Colors.green[200]!,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: isDark ? Colors.green[300] : Colors.green[700],
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'API 키 발급 방법',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color:
+                                isDark ? Colors.green[100] : Colors.green[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '1. Groq Cloud 접속\n'
+                      '   (console.groq.com)\n\n'
+                      '2. API Keys 메뉴 클릭\n\n'
+                      '3. API 키 복사 후 붙여넣기',
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: isDark ? Colors.green[100] : Colors.green[900],
                       ),
                     ),
                   ],

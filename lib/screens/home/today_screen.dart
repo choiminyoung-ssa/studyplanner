@@ -56,6 +56,19 @@ class _TodayScreenState extends State<TodayScreen> {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 1000;
         final maxWidth = isWide ? 1200.0 : 720.0;
+
+        if (_minimalMode) {
+          return _buildMinimalLayout(
+            context,
+            constraints,
+            userId: userId,
+            today: today,
+            firestoreService: firestoreService,
+          );
+        }
+
+        final padding = const EdgeInsets.fromLTRB(16, 20, 16, 32);
+
         final headerCard = _buildAnimatedEntry(
           _buildHeaderCard(
             context,
@@ -98,13 +111,13 @@ class _TodayScreenState extends State<TodayScreen> {
           ),
           delay: 240,
         );
-        final gapSmall = _minimalMode ? 12.0 : 16.0;
-        final gapLarge = _minimalMode ? 16.0 : 20.0;
+        final gapSmall = _minimalMode ? 8.0 : 16.0;
+        final gapLarge = _minimalMode ? 12.0 : 20.0;
 
         return DecoratedBox(
           decoration: BoxDecoration(color: colorScheme.surface),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+            padding: padding,
             child: Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(
@@ -166,6 +179,81 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  Widget _buildMinimalLayout(
+    BuildContext context,
+    BoxConstraints constraints, {
+    required String userId,
+    required DateTime today,
+    required FirestoreService firestoreService,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isWide = constraints.maxWidth >= 1100;
+    final gap = 12.0;
+    final padding = const EdgeInsets.fromLTRB(10, 12, 10, 24);
+
+    final headerBar = _buildMinimalHeaderBar(
+      context,
+      today,
+      onToggleMinimal: _setMinimalMode,
+    );
+    final todaySection = _buildTodayPlansSection(
+      context,
+      userId: userId,
+      today: today,
+      firestoreService: firestoreService,
+      minimalMode: true,
+    );
+    final weeklySection = _buildWeeklySection(
+      context,
+      userId: userId,
+      today: today,
+      firestoreService: firestoreService,
+      minimalMode: true,
+    );
+    final monthlySection = _buildMonthlySection(
+      context,
+      userId: userId,
+      today: today,
+      firestoreService: firestoreService,
+      minimalMode: true,
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(color: colorScheme.surface),
+      child: SingleChildScrollView(
+        padding: padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            headerBar,
+            const SizedBox(height: 12),
+            isWide
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: todaySection),
+                      SizedBox(width: gap),
+                      Expanded(child: weeklySection),
+                      SizedBox(width: gap),
+                      Expanded(child: monthlySection),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      todaySection,
+                      SizedBox(height: gap),
+                      weeklySection,
+                      SizedBox(height: gap),
+                      monthlySection,
+                    ],
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildAnimatedEntry(Widget child, {int delay = 0}) {
     final baseDuration = 360;
     final totalDuration = baseDuration + delay;
@@ -199,20 +287,30 @@ class _TodayScreenState extends State<TodayScreen> {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final padding = minimal ? 12.0 : 16.0;
+    final radius = minimal ? 16.0 : 20.0;
+    final cardColor = minimal
+        ? colorScheme.surfaceContainerHighest.withAlpha(160)
+        : colorScheme.surface;
+    final borderColor = minimal
+        ? colorScheme.outlineVariant.withAlpha(120)
+        : colorScheme.outlineVariant.withAlpha(80);
+    final shadows = minimal
+        ? const <BoxShadow>[]
+        : [
+            BoxShadow(
+              color: colorScheme.shadow.withAlpha(18),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ];
 
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colorScheme.outlineVariant.withAlpha(80)),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withAlpha(18),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: cardColor,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: borderColor),
+        boxShadow: shadows,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,6 +321,7 @@ class _TodayScreenState extends State<TodayScreen> {
             title: title,
             subtitle: minimal ? null : subtitle,
             trailing: trailing,
+            minimal: minimal,
           ),
           SizedBox(height: minimal ? 8 : 12),
           child,
@@ -684,6 +783,84 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  Widget _buildMinimalHeaderBar(
+    BuildContext context,
+    DateTime today, {
+    required ValueChanged<bool> onToggleMinimal,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withAlpha(180),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.calendar_month_rounded,
+              color: colorScheme.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateHelper.toKoreanDateString(today),
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${DateHelper.getWeekdayName(today)}요일',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colorScheme.outlineVariant.withAlpha(120)),
+            ),
+            child: const Text(
+              '미니멀',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Transform.scale(
+            scale: 0.9,
+            child: Switch.adaptive(
+              value: true,
+              onChanged: onToggleMinimal,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMinimalToggleCard(
     BuildContext context,
     bool minimalMode,
@@ -838,18 +1015,25 @@ class _TodayScreenState extends State<TodayScreen> {
     required String title,
     String? subtitle,
     Widget? trailing,
+    bool minimal = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
+    final iconSize = minimal ? 16.0 : 18.0;
+    final iconPadding = minimal ? 5.0 : 6.0;
+    final iconColor = minimal ? colorScheme.primary : colorScheme.primary;
+    final iconBackground = minimal
+        ? colorScheme.surfaceContainerHighest.withAlpha(200)
+        : colorScheme.primaryContainer;
 
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(iconPadding),
           decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
+            color: iconBackground,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 18, color: colorScheme.primary),
+          child: Icon(icon, size: iconSize, color: iconColor),
         ),
         const SizedBox(width: 10),
         Expanded(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/unified_ai_service.dart';
 import '../../services/command_handler_service.dart';
+import '../../utils/date_utils.dart';
 import '../settings/ai_settings_screen.dart';
 
 class AIChatbotScreen extends StatefulWidget {
@@ -39,6 +41,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
             '저는 학습 플래너 AI 어시스턴트입니다.\n\n'
             '다음과 같은 기능을 도와드릴 수 있어요:\n'
             '• 일정 추가/조회\n'
+            '• 주간/월간 계획 추가\n'
+            '• 학습 목표 설정\n'
+            '• 과목 추가\n'
             '• 학습 통계 확인\n'
             '• 할일 관리\n'
             '• 검색\n'
@@ -97,10 +102,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           switch (intent['action']) {
             case 'create_schedule':
               print('📅 DEBUG: Creating schedule...');
-              commandResult = await _commandHandler.createSchedule(
-                intent['parameters'],
-              );
-              print('✅ DEBUG: Schedule created: $commandResult');
+              // 확인 절차 추가
+              final schedulePreview = _generateSchedulePreview(intent['parameters']);
+              finalResponse = '$aiResponse\n\n━━━━━━━━━━━━━━\n\n$schedulePreview\n\n이 일정을 추가하시겠어요? (예/아니오)';
               break;
             case 'view_schedule':
               print('👁️ DEBUG: Viewing schedule...');
@@ -130,6 +134,62 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
               );
               print('✅ DEBUG: Search done: $commandResult');
               break;
+            case 'add_subject':
+              print('📚 DEBUG: Adding subject...');
+              commandResult = await _commandHandler.addSubject(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Subject added: $commandResult');
+              break;
+            case 'set_goal':
+              print('🎯 DEBUG: Setting goal...');
+              commandResult = await _commandHandler.setGoal(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Goal set: $commandResult');
+              break;
+            case 'set_weekly_plan':
+              print('🗓️ DEBUG: Setting weekly plan...');
+              commandResult = await _commandHandler.setWeeklyPlan(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Weekly plan set: $commandResult');
+              break;
+            case 'set_monthly_plan':
+              print('🗓️ DEBUG: Setting monthly plan...');
+              commandResult = await _commandHandler.setMonthlyPlan(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Monthly plan set: $commandResult');
+              break;
+            case 'set_timetable':
+              print('🧭 DEBUG: Setting timetable...');
+              commandResult = await _commandHandler.setTimetable(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Timetable set: $commandResult');
+              break;
+            case 'set_notification':
+              print('🔔 DEBUG: Setting notifications...');
+              commandResult = await _commandHandler.setNotification(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Notifications set: $commandResult');
+              break;
+            case 'set_priority_matrix':
+              print('📌 DEBUG: Setting priority matrix...');
+              commandResult = await _commandHandler.setPriorityMatrix(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Priority matrix set: $commandResult');
+              break;
+            case 'add_to_backlog':
+              print('📝 DEBUG: Adding to backlog...');
+              commandResult = await _commandHandler.addToBacklog(
+                intent['parameters'],
+              );
+              print('✅ DEBUG: Added to backlog: $commandResult');
+              break;
             default:
               print('⚠️ DEBUG: Unknown action: ${intent['action']}');
           }
@@ -138,8 +198,9 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
           if (commandResult != null && commandResult.isNotEmpty) {
             finalResponse = '$aiResponse\n\n━━━━━━━━━━━━━━\n\n$commandResult';
             print('✅ DEBUG: Final response prepared');
-          } else {
-            print('⚠️ DEBUG: Command result is empty or null');
+          } else if (intent['action'] != 'create_schedule') {
+            // 일정 생성이 아닌 경우에만 AI 응답만 표시
+            finalResponse = aiResponse;
           }
         } catch (e) {
           print('❌ DEBUG: Error during command execution: $e');
@@ -174,6 +235,170 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  String _generateSchedulePreview(Map<String, dynamic> parameters) {
+    final subject = parameters['subject'] ?? '새 일정';
+    final time = parameters['time'] ?? '시간 미정';
+    final duration = parameters['duration'] ?? '1시간';
+    final materials = parameters['materials'] is List<dynamic>
+        ? List<String>.from(parameters['materials'])
+        : <String>[];
+
+    final scheduleDateTime = _parseScheduleDateTime(time.toString());
+    final dateStr = DateFormat('M월 d일 (E) a h:mm', 'ko_KR').format(scheduleDateTime);
+    final endTimeStr = _resolveEndTimeStringWithDuration(scheduleDateTime, duration.toString());
+
+    final preview = [
+      '📅 일정 미리보기',
+      '',
+      '• 과목: $subject',
+      '• 날짜: $dateStr',
+      '• 종료: ${DateFormat('a h:mm', 'ko_KR').format(DateHelper.timeStringToDateTime(endTimeStr, scheduleDateTime))}',
+      '• 예상 소요 시간: $duration',
+    ];
+
+    if (materials.isNotEmpty) {
+      preview.add('• 학습 자료: ${materials.join(', ')}');
+    }
+
+    return preview.join('\n');
+  }
+
+  DateTime _parseScheduleDateTime(String timeStr) {
+    final now = DateTime.now();
+    DateTime baseDate = DateTime(now.year, now.month, now.day);
+
+    if (timeStr.contains('모레')) {
+      baseDate = baseDate.add(const Duration(days: 2));
+    } else if (timeStr.contains('내일')) {
+      baseDate = baseDate.add(const Duration(days: 1));
+    } else if (timeStr.contains('다음주')) {
+      final nextWeekStart =
+          DateHelper.getWeekStartDate(baseDate).add(const Duration(days: 7));
+      final weekdayIndex = _extractWeekdayIndex(timeStr);
+      baseDate = weekdayIndex == null
+          ? nextWeekStart
+          : nextWeekStart.add(Duration(days: weekdayIndex));
+    } else if (timeStr.contains('이번주') || timeStr.contains('이번 주')) {
+      final weekStart = DateHelper.getWeekStartDate(baseDate);
+      final weekdayIndex = _extractWeekdayIndex(timeStr);
+      if (weekdayIndex != null) {
+        baseDate = weekStart.add(Duration(days: weekdayIndex));
+      }
+    }
+
+    int hour = 9;
+    int minute = 0;
+
+    final colonMatch =
+        RegExp(r'(\d{1,2}):(\d{2})').firstMatch(timeStr);
+    if (colonMatch != null) {
+      hour = int.parse(colonMatch.group(1)!);
+      minute = int.parse(colonMatch.group(2)!);
+    } else {
+      final hourMatch =
+          RegExp(r'(\d{1,2})\s*시').firstMatch(timeStr);
+      if (hourMatch != null) {
+        hour = int.parse(hourMatch.group(1)!);
+      }
+
+      final minuteMatch =
+          RegExp(r'(\d{1,2})\s*분').firstMatch(timeStr);
+      if (minuteMatch != null) {
+        minute = int.parse(minuteMatch.group(1)!);
+      }
+    }
+
+    if (timeStr.contains('오후')) {
+      if (hour < 12) {
+        hour += 12;
+      }
+    } else if (timeStr.contains('오전') || timeStr.contains('아침')) {
+      if (hour == 12) {
+        hour = 0;
+      }
+    }
+
+    return DateTime(
+      baseDate.year,
+      baseDate.month,
+      baseDate.day,
+      hour,
+      minute,
+    );
+  }
+
+  int? _extractWeekdayIndex(String text) {
+    const weekdays = {
+      '월요일': 0,
+      '화요일': 1,
+      '수요일': 2,
+      '목요일': 3,
+      '금요일': 4,
+      '토요일': 5,
+      '일요일': 6,
+    };
+
+    for (final entry in weekdays.entries) {
+      if (text.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+
+    return null;
+  }
+
+  String _resolveEndTimeStringWithDuration(DateTime startDateTime, String durationStr) {
+    if (durationStr.isEmpty) {
+      return _resolveEndTimeString(startDateTime);
+    }
+
+    final minutes = _parseDurationMinutes(durationStr);
+    if (minutes <= 0) {
+      return _resolveEndTimeString(startDateTime);
+    }
+
+    final endDateTime = startDateTime.add(Duration(minutes: minutes));
+    if (endDateTime.day != startDateTime.day) {
+      return '23:59';
+    }
+    return DateHelper.toTimeString(endDateTime);
+  }
+
+  int _parseDurationMinutes(String durationStr) {
+    if (durationStr.isEmpty) return 60;
+
+    // "3시간" 형태
+    final hourMatch = RegExp(r'(\d+)\s*시간').firstMatch(durationStr);
+    if (hourMatch != null) {
+      return int.parse(hourMatch.group(1)!) * 60;
+    }
+
+    // "2시간 30분" 형태
+    final hourMinuteMatch = RegExp(r'(\d+)\s*시간\s*(\d+)\s*분').firstMatch(durationStr);
+    if (hourMinuteMatch != null) {
+      final hours = int.parse(hourMinuteMatch.group(1)!);
+      final minutes = int.parse(hourMinuteMatch.group(2)!);
+      return hours * 60 + minutes;
+    }
+
+    // "90분" 형태
+    final minuteMatch = RegExp(r'(\d+)\s*분').firstMatch(durationStr);
+    if (minuteMatch != null) {
+      return int.parse(minuteMatch.group(1)!);
+    }
+
+    // 기본값 60분
+    return 60;
+  }
+
+  String _resolveEndTimeString(DateTime startDateTime) {
+    final endDateTime = startDateTime.add(const Duration(hours: 1));
+    if (endDateTime.day != startDateTime.day) {
+      return '23:59';
+    }
+    return DateHelper.toTimeString(endDateTime);
   }
 
   void _scrollToBottom() {
@@ -289,9 +514,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _aiService.currentMode.name == 'gemini'
-                        ? '🤖 Gemini AI 사용 중 (고품질 응답)'
-                        : '💡 완전 무료! API 키나 계정이 필요 없습니다',
+                    _aiService.currentBannerMessage,
                     style: TextStyle(
                       fontSize: 13,
                       color: isDark ? Colors.blue[100] : Colors.blue[900],
@@ -358,6 +581,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
                 child: Row(
                   children: [
                     _buildQuickButton('📅 일정 추가', '일정 추가해줘'),
+                    const SizedBox(width: 8),
+                    _buildQuickButton('🎯 목표 설정', '이번 주 목표 10시간으로 설정'),
+                    const SizedBox(width: 8),
+                    _buildQuickButton('📚 과목 추가', '과목 추가: 수학'),
                     const SizedBox(width: 8),
                     _buildQuickButton('📊 통계 보기', '이번 주 공부 시간'),
                     const SizedBox(width: 8),

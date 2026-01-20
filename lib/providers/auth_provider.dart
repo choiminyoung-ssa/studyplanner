@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences';
 import '../services/auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -18,12 +19,53 @@ class AuthProvider with ChangeNotifier {
   String? get userId => _user?.uid;
 
   AuthProvider() {
-    // 인증 상태 변경 리스너
-    _authService.authStateChanges.listen((User? user) {
-      _user = user;
+    _initializeAuth();
+  }
+
+  Future<void> _initializeAuth() async {
+    try {
+      // SharedPreferences에서 저장된 사용자 정보 로드
+      final prefs = await SharedPreferences.getInstance();
+      final savedUserId = prefs.getString('user_id');
+      final savedEmail = prefs.getString('user_email');
+      final savedDisplayName = prefs.getString('user_display_name');
+      final savedPhotoUrl = prefs.getString('user_photo_url');
+
+      if (savedUserId != null) {
+        // 오프라인 모드: 저장된 정보로 사용자 객체 생성
+        _user = User(
+          uid: savedUserId,
+          email: savedEmail,
+          displayName: savedDisplayName,
+          photoURL: savedPhotoUrl,
+          isAnonymous: false,
+          isEmailVerified: false,
+          providerData: [],
+          metadata: UserMetadata(
+            creationTime: null,
+            lastSignInTime: null,
+          ),
+          phoneNumber: null,
+          tenantId: null,
+          multiFactor: MultiFactor(
+            enrolledFactors: [],
+          ),
+        );
+        _isInitialized = true;
+        notifyListeners();
+      } else {
+        // 온라인 모드: Firebase 인증 상태 변경 리스너
+        _authService.authStateChanges.listen((User? user) {
+          _user = user;
+          _isInitialized = true;
+          notifyListeners();
+        });
+      }
+    } catch (e) {
+      print('❌ AuthProvider 초기화 오류: $e');
       _isInitialized = true;
       notifyListeners();
-    });
+    }
   }
 
   // 회원가입

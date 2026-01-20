@@ -3,17 +3,18 @@
 class AISettings {
   final AIMode mode;
   final String? geminiApiKey;
+  final String? groqApiKey;
 
   const AISettings({
     required this.mode,
     this.geminiApiKey,
+    this.groqApiKey,
   });
 
-  /// 기본 설정 (Gemini AI with API key)
+  /// 기본 설정 (Local AI)
   factory AISettings.defaultSettings() {
     return const AISettings(
-      mode: AIMode.gemini,
-      geminiApiKey: 'AIzaSyBsoUF84aHi2Qv8Dv-yIQrJQ_dQ0ccBDqo',
+      mode: AIMode.local,
     );
   }
 
@@ -25,6 +26,7 @@ class AISettings {
         orElse: () => AIMode.local,
       ),
       geminiApiKey: json['geminiApiKey'] as String?,
+      groqApiKey: json['groqApiKey'] as String?,
     );
   }
 
@@ -33,6 +35,7 @@ class AISettings {
     return {
       'mode': mode.name,
       'geminiApiKey': geminiApiKey,
+      'groqApiKey': groqApiKey,
     };
   }
 
@@ -40,10 +43,12 @@ class AISettings {
   AISettings copyWith({
     AIMode? mode,
     String? geminiApiKey,
+    String? groqApiKey,
   }) {
     return AISettings(
       mode: mode ?? this.mode,
       geminiApiKey: geminiApiKey ?? this.geminiApiKey,
+      groqApiKey: groqApiKey ?? this.groqApiKey,
     );
   }
 
@@ -53,11 +58,19 @@ class AISettings {
            geminiApiKey != null &&
            geminiApiKey!.isNotEmpty;
   }
+
+  /// Groq 모드 사용 가능 여부 확인
+  bool get canUseGroq {
+    return mode == AIMode.groq &&
+           groqApiKey != null &&
+           groqApiKey!.isNotEmpty;
+  }
 }
 
 /// AI 모드 열거형
 enum AIMode {
   gemini,  // Google Gemini API (클라우드, API 키 필요, 고품질)
+  groq,    // Groq API (클라우드, API 키 필요, 초고속)
   local,   // 로컬 패턴 매칭 (무료, API 키 불필요, 오프라인)
 }
 
@@ -68,6 +81,8 @@ extension AIModeExtension on AIMode {
     switch (this) {
       case AIMode.gemini:
         return 'Google Gemini AI';
+      case AIMode.groq:
+        return 'Groq AI';
       case AIMode.local:
         return '로컬 AI (무료)';
     }
@@ -78,6 +93,8 @@ extension AIModeExtension on AIMode {
     switch (this) {
       case AIMode.gemini:
         return '고품질 AI 응답 (API 키 필요)';
+      case AIMode.groq:
+        return '초고속 AI 응답 (API 키 필요)';
       case AIMode.local:
         return '기본 패턴 매칭 (API 키 불필요, 완전 무료)';
     }
@@ -88,6 +105,8 @@ extension AIModeExtension on AIMode {
     switch (this) {
       case AIMode.gemini:
         return '🤖';
+      case AIMode.groq:
+        return '⚡';
       case AIMode.local:
         return '💫';
     }

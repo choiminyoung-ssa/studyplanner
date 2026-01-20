@@ -19,6 +19,31 @@ class LocalAIService {
       return '안녕하세요! 👋\n무엇을 도와드릴까요?';
     }
 
+    // 과목 추가
+    if (_containsAny(lowerMessage, ['과목', 'subject']) &&
+        _containsAny(lowerMessage, ['추가', '등록', '생성', '만들'])) {
+      final subjectName = _extractSubjectName(message);
+      return '✅ "$subjectName" 과목을 추가할게요!';
+    }
+
+    // 목표 설정
+    if (_containsAny(lowerMessage, ['목표', 'goal']) &&
+        _containsAny(lowerMessage, ['설정', '세워', '추가', '등록'])) {
+      return '🎯 목표를 설정할게요! 원하는 기간과 시간을 알려주세요.';
+    }
+
+    // 주간/월간 계획
+    if (_containsAny(lowerMessage, ['주간', '이번 주']) &&
+        _containsAny(lowerMessage, ['계획', '목표', '플랜']) &&
+        _containsAny(lowerMessage, ['추가', '설정', '등록', '짜', '세워'])) {
+      return '🗓️ 주간 계획을 추가할게요!';
+    }
+    if (_containsAny(lowerMessage, ['월간', '이번 달']) &&
+        _containsAny(lowerMessage, ['계획', '목표', '플랜']) &&
+        _containsAny(lowerMessage, ['추가', '설정', '등록', '짜', '세워'])) {
+      return '🗓️ 월간 계획을 추가할게요!';
+    }
+
     // 일정 관련
     if (_containsAny(lowerMessage, ['일정', '스케줄', '계획'])) {
       if (_containsAny(lowerMessage, ['추가', '생성', '만들', '등록', '넣'])) {
@@ -180,6 +205,15 @@ class LocalAIService {
         '• "내일 오후 3시에 수학 공부 일정 추가해줘"\n'
         '• "오늘 일정 알려줘"\n'
         '• "이번 주 일정 보여줘"\n\n'
+        '🗓️ **주간/월간 계획**\n'
+        '• "이번 주 계획 세워줘: 수학 5단원"\n'
+        '• "이번 달 목표 추가: 영어 2권 완독"\n\n'
+        '🎯 **학습 목표 설정**\n'
+        '• "이번 주 목표 10시간으로 설정"\n'
+        '• "오늘 목표 2시간"\n\n'
+        '📚 **과목 관리**\n'
+        '• "과목 추가: 화학"\n'
+        '• "새 과목 등록: 한국사"\n\n'
         '📊 **학습 통계**\n'
         '• "오늘 얼마나 공부했어?"\n'
         '• "이번 주 공부 시간 알려줘"\n\n'
@@ -236,15 +270,65 @@ class LocalAIService {
       'confidence': 0.5,
     };
 
-    // 일정 생성 (더 많은 패턴 지원)
-    if ((_containsAny(lowerMessage, ['일정', '스케줄', '계획']) &&
-        _containsAny(lowerMessage, ['추가', '생성', '만들', '등록', '넣', '해야', '해야해', '공부'])) ||
+    // 과목 추가
+    if (_containsAny(lowerMessage, ['과목', 'subject']) &&
+        _containsAny(lowerMessage, ['추가', '등록', '생성', '만들'])) {
+      result['action'] = 'add_subject';
+      result['parameters'] = {
+        'name': _extractSubjectName(message),
+        if (_extractHexColor(message) != null) 'color': _extractHexColor(message),
+      };
+      result['confidence'] = 0.9;
+      print('✅ DEBUG: Detected add_subject with confidence 0.9');
+    }
+    // 목표 설정
+    else if (_containsAny(lowerMessage, ['목표', 'goal']) &&
+        _containsAny(lowerMessage, ['설정', '세워', '추가', '등록'])) {
+      result['action'] = 'set_goal';
+      result['parameters'] = {
+        'period': _extractGoalPeriod(message),
+        'target': _extractTargetMinutes(message),
+      };
+      result['confidence'] = 0.88;
+      print('✅ DEBUG: Detected set_goal with confidence 0.88');
+    }
+    // 주간 계획 설정
+    else if (_containsAny(lowerMessage, ['주간', '이번 주']) &&
+        _containsAny(lowerMessage, ['계획', '목표', '플랜']) &&
+        _containsAny(lowerMessage, ['추가', '설정', '등록', '짜', '세워'])) {
+      result['action'] = 'set_weekly_plan';
+      result['parameters'] = {
+        'title': _extractPlanTitle(message, '이번 주 계획'),
+        'week': message,
+        'subject': _extractSubject(message),
+      };
+      result['confidence'] = 0.86;
+      print('✅ DEBUG: Detected set_weekly_plan with confidence 0.86');
+    }
+    // 월간 계획 설정
+    else if (_containsAny(lowerMessage, ['월간', '이번 달']) &&
+        _containsAny(lowerMessage, ['계획', '목표', '플랜']) &&
+        _containsAny(lowerMessage, ['추가', '설정', '등록', '짜', '세워'])) {
+      result['action'] = 'set_monthly_plan';
+      result['parameters'] = {
+        'title': _extractPlanTitle(message, '이번 달 계획'),
+        'month': message,
+        'subject': _extractSubject(message),
+      };
+      result['confidence'] = 0.86;
+      print('✅ DEBUG: Detected set_monthly_plan with confidence 0.86');
+    }
+    // 일정 생성 (시간과 학습 자료 파라미터 포함)
+    else if ((_containsAny(lowerMessage, ['일정', '스케줄', '계획']) &&
+            _containsAny(lowerMessage, ['추가', '생성', '만들', '등록', '넣', '해야', '해야해', '공부'])) ||
         (_containsAny(lowerMessage, ['내일', '모레', '다음주', '오후', '아침']) &&
-        _containsAny(lowerMessage, ['수학', '영어', '과학', '국어', '공부', '숙제', '과제']))) {
+            _containsAny(lowerMessage, ['수학', '영어', '과학', '국어', '공부', '숙제', '과제']))) {
       result['action'] = 'create_schedule';
       result['parameters'] = {
         'subject': _extractSubject(message),
         'time': message,
+        'duration': _extractDuration(message),
+        'materials': _extractMaterials(message),
       };
       result['confidence'] = 0.92;
       print('✅ DEBUG: Detected create_schedule with confidence 0.92');
@@ -301,5 +385,145 @@ class LocalAIService {
 
     print('📊 DEBUG: Final result - action: ${result['action']}, confidence: ${result['confidence']}');
     return result;
+  }
+
+  String _extractSubjectName(String message) {
+    final quoted = _extractQuotedText(message);
+    if (quoted.isNotEmpty) {
+      return quoted;
+    }
+
+    final match = RegExp(r'(과목|subject)\s*(추가|등록|생성|만들기|만들어)?\s*([가-힣A-Za-z0-9 ]+)')
+        .firstMatch(message);
+    if (match != null) {
+      final value = match.group(3)?.trim();
+      if (value != null && value.isNotEmpty) {
+        return value.split(' ').first;
+      }
+    }
+
+    return _extractSubject(message);
+  }
+
+  String _extractGoalPeriod(String message) {
+    if (message.contains('일간') || message.contains('오늘')) {
+      return 'daily';
+    }
+    if (message.contains('월간') || message.contains('이번 달')) {
+      return 'monthly';
+    }
+    return 'weekly';
+  }
+
+  int _extractTargetMinutes(String message) {
+    final hourMatch = RegExp(r'(\d+)\s*시간').firstMatch(message);
+    final minuteMatch = RegExp(r'(\d+)\s*분').firstMatch(message);
+
+    int minutes = 0;
+    if (hourMatch != null) {
+      minutes += int.parse(hourMatch.group(1)!) * 60;
+    }
+    if (minuteMatch != null) {
+      minutes += int.parse(minuteMatch.group(1)!);
+    }
+
+    if (minutes > 0) {
+      return minutes;
+    }
+
+    final numericMatch = RegExp(r'(\d+)').firstMatch(message);
+    return numericMatch != null ? int.parse(numericMatch.group(1)!) : 60;
+  }
+
+  String _extractPlanTitle(String message, String fallback) {
+    final quoted = _extractQuotedText(message);
+    if (quoted.isNotEmpty) {
+      return quoted;
+    }
+
+    final cleaned = message
+        .replaceAll(RegExp(r'(주간|월간|이번 주|이번 달|계획|목표|플랜|추가|설정|등록|세워|짜줘|짜|작성|만들어|만들기|해줘)'), '')
+        .replaceAll(RegExp(r'[:：]'), '')
+        .trim();
+
+    if (cleaned.isEmpty) {
+      return fallback;
+    }
+
+    return cleaned.length > 24 ? cleaned.substring(0, 24).trim() : cleaned;
+  }
+
+  String? _extractHexColor(String message) {
+    final match = RegExp(r'#?[0-9a-fA-F]{6}').firstMatch(message);
+    if (match == null) {
+      return null;
+    }
+    final value = match.group(0) ?? '';
+    return value.startsWith('#') ? value : '#$value';
+  }
+
+  String _extractQuotedText(String message) {
+    final match = RegExp(r'"([^"]+)"').firstMatch(message) ??
+        RegExp(r"'([^']+)'").firstMatch(message);
+    return match?.group(1)?.trim() ?? '';
+  }
+
+  /// 시간 길이 추출 (로컬 AI 전용)
+  String _extractDuration(String message) {
+    final lowerMsg = message.toLowerCase();
+    
+    // "3시간" 형태
+    final hourMatch = RegExp(r'(\d+)\s*시간').firstMatch(lowerMsg);
+    if (hourMatch != null) {
+      return '${hourMatch.group(1)}시간';
+    }
+
+    // "2시간 30분" 형태
+    final hourMinuteMatch = RegExp(r'(\d+)\s*시간\s*(\d+)\s*분').firstMatch(lowerMsg);
+    if (hourMinuteMatch != null) {
+      return '${hourMinuteMatch.group(1)}시간 ${hourMinuteMatch.group(2)}분';
+    }
+
+    // "90분" 형태
+    final minuteMatch = RegExp(r'(\d+)\s*분').firstMatch(lowerMsg);
+    if (minuteMatch != null) {
+      return '${minuteMatch.group(1)}분';
+    }
+
+    // 기본값
+    return '1시간';
+  }
+
+  /// 학습 자료 추출 (로컬 AI 전용)
+  List<String> _extractMaterials(String message) {
+    final lowerMsg = message.toLowerCase();
+    final materials = <String>[];
+
+    // 일반적인 학습 자료 패턴
+    final materialPatterns = {
+      '문법책': ['문법책', '문법서', 'grammar book'],
+      '단어장': ['단어장', '단어책', 'vocabulary book'],
+      '문제집': ['문제집', '연습문제', 'practice book'],
+      '교과서': ['교과서', 'textbook', '교재'],
+      '노트': ['노트', 'notebook', '공책'],
+      '참고서': ['참고서', 'reference book', '참고자료'],
+      '온라인 강의': ['온라인 강의', '강의', 'lecture', 'video'],
+      '유튜브': ['유튜브', 'youtube', '동영상'],
+      '앱': ['앱', 'application', 'app'],
+      '플래시카드': ['플래시카드', 'flashcard', '플래시'],
+    };
+
+    for (final entry in materialPatterns.entries) {
+      if (materials.length >= 3) break; // 최대 3개까지만
+      
+      for (final pattern in entry.value) {
+        if (lowerMsg.contains(pattern) && !materials.contains(entry.key)) {
+          materials.add(entry.key);
+          break;
+        }
+      }
+    }
+
+    return materials;
   }
 }
