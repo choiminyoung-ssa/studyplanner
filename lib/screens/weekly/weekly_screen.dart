@@ -964,7 +964,7 @@ class _WeeklyScreenState extends State<WeeklyScreen> {
               title: const Text('삭제하기', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
-                _confirmDelete(plan);
+                _confirmDeletePlan(plan);
               },
             ),
             const SizedBox(height: 8),
