@@ -444,7 +444,7 @@ class _TodayScreenState extends State<TodayScreen> {
       context,
       icon: Icons.calendar_view_week_rounded,
       title: '이번 주 계획',
-      subtitle: '이번 주 전체 일정',
+      subtitle: '오늘 일정만 표시',
       minimal: minimalMode,
       child: StreamBuilder<List<WeeklyPlan>>(
         stream: firestoreService.getWeeklyPlansByDateRange(
@@ -467,20 +467,18 @@ class _TodayScreenState extends State<TodayScreen> {
           } else {
             final weeklyPlans = snapshot.data ?? [];
             weeklyPlans.sort((a, b) => a.date.compareTo(b.date));
-            final filteredPlans = minimalMode
-                ? weeklyPlans
-                      .where((plan) => DateHelper.isSameDay(plan.date, today))
-                      .toList()
-                : weeklyPlans;
+            final filteredPlans = weeklyPlans
+                .where((plan) => DateHelper.isSameDay(plan.date, today))
+                .toList();
 
             if (filteredPlans.isEmpty) {
               content = _buildEmptyStateCard(
                 context,
                 key: const ValueKey('weekly-empty'),
                 icon: Icons.calendar_today,
-                message: minimalMode ? '오늘 주간 계획이 없습니다' : '이번 주 계획이 없습니다',
-                exampleTitle: minimalMode ? null : '예시: 주간 수학 목표',
-                exampleSubtitle: minimalMode ? null : '이번 주 총 5시간 확보',
+                message: '오늘 주간 계획이 없습니다',
+                exampleTitle: '예시: 주간 수학 목표',
+                exampleSubtitle: '이번 주 총 5시간 확보',
                 actionLabel: '주간 계획 추가',
                 onAction: () {
                   Navigator.push(
