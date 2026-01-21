@@ -145,14 +145,12 @@ class MyApp extends StatelessWidget {
         primary: Colors.blue[400]!, // 밝은 파란색 (대비 향상)
         secondary: Colors.blueAccent[200]!,
         surface: darkSurface,
-        background: darkBackground,
         error: Colors.red[400]!,
         onPrimary: Colors.black, // primary 위의 텍스트는 검정
         onSecondary: Colors.black,
-        onSurface: Colors.white, // surface 위의 텍스트는 흰색 (높은 대비)
-        onBackground: Colors.white, // background 위의 텍스트는 흰색
+        onSurface: Colors.white, // background 위의 텍스트는 흰색
         onError: Colors.black,
-        surfaceVariant: darkSurfaceVariant,
+        surfaceContainerHighest: darkSurfaceVariant,
         outline: Colors.grey[700]!,
       ),
       useMaterial3: true,
@@ -259,14 +257,14 @@ class MyApp extends StatelessWidget {
 
       // 스위치 테마
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return Colors.blue[400];
           }
           return Colors.grey[600];
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return Colors.blue[200];
           }
           return Colors.grey[800];
@@ -275,13 +273,13 @@ class MyApp extends StatelessWidget {
 
       // 체크박스 테마
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return Colors.blue[400];
           }
           return Colors.transparent;
         }),
-        checkColor: MaterialStateProperty.all(Colors.black),
+        checkColor: WidgetStateProperty.all(Colors.black),
       ),
 
       // Divider 테마
