@@ -44,17 +44,24 @@ class _AISettingsScreenState extends State<AISettingsScreen> {
     final geminiInput = _geminiKeyController.text.trim();
     final groqInput = _groqKeyController.text.trim();
 
-    final resolvedGeminiKey =
-        geminiInput.isEmpty ? _currentSettings.geminiApiKey : geminiInput;
-    final resolvedGroqKey =
-        groqInput.isEmpty ? _currentSettings.groqApiKey : groqInput;
+    // 사용자가 키를 입력하지 않았을 경우 내장된 기본 키 사용
+    final defaultSettings = AISettings.defaultSettings();
+    final resolvedGeminiKey = geminiInput.isEmpty
+        ? (_currentSettings.geminiApiKey?.trim().isNotEmpty == true
+            ? _currentSettings.geminiApiKey
+            : defaultSettings.geminiApiKey)
+        : geminiInput;
+
+    final resolvedGroqKey = groqInput.isEmpty
+        ? (_currentSettings.groqApiKey?.trim().isNotEmpty == true
+            ? _currentSettings.groqApiKey
+            : defaultSettings.groqApiKey)
+        : groqInput;
 
     final newSettings = AISettings(
       mode: _currentSettings.mode,
-      geminiApiKey:
-          resolvedGeminiKey?.trim().isEmpty == true ? null : resolvedGeminiKey,
-      groqApiKey:
-          resolvedGroqKey?.trim().isEmpty == true ? null : resolvedGroqKey,
+      geminiApiKey: resolvedGeminiKey,
+      groqApiKey: resolvedGroqKey,
     );
 
     final success = await widget.aiService.updateSettings(newSettings);

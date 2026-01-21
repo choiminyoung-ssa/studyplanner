@@ -7,6 +7,22 @@ import '../models/ai_settings.dart';
 class AISettingsStorage {
   static const String _keyAISettings = 'ai_settings';
 
+  AISettings _mergeWithDefaults(AISettings settings) {
+    final defaults = AISettings.defaultSettings();
+    return settings.copyWith(
+      geminiApiKey: _resolveKey(settings.geminiApiKey, defaults.geminiApiKey),
+      groqApiKey: _resolveKey(settings.groqApiKey, defaults.groqApiKey),
+    );
+  }
+
+  String? _resolveKey(String? value, String? fallback) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return fallback;
+    }
+    return value;
+  }
+
   /// AI 설정 불러오기
   Future<AISettings> loadSettings() async {
     try {
@@ -18,7 +34,7 @@ class AISettingsStorage {
       }
 
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
-      return AISettings.fromJson(json);
+      return _mergeWithDefaults(AISettings.fromJson(json));
     } catch (e) {
       print('❌ AI 설정 불러오기 실패: $e');
       return AISettings.defaultSettings();
@@ -29,7 +45,8 @@ class AISettingsStorage {
   Future<bool> saveSettings(AISettings settings) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = jsonEncode(settings.toJson());
+      final resolved = _mergeWithDefaults(settings);
+      final jsonString = jsonEncode(resolved.toJson());
       return await prefs.setString(_keyAISettings, jsonString);
     } catch (e) {
       print('❌ AI 설정 저장 실패: $e');

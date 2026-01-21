@@ -15,6 +15,22 @@ class UnifiedAIService {
   GroqAIService? _groqService;
   final LocalAIService _localService = LocalAIService();
 
+  AISettings _resolveSettings(AISettings settings) {
+    final defaults = AISettings.defaultSettings();
+    return settings.copyWith(
+      geminiApiKey: _resolveKey(settings.geminiApiKey, defaults.geminiApiKey),
+      groqApiKey: _resolveKey(settings.groqApiKey, defaults.groqApiKey),
+    );
+  }
+
+  String? _resolveKey(String? value, String? fallback) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return fallback;
+    }
+    return value;
+  }
+
   UnifiedAIService._();
 
   /// 팩토리 생성자 - 설정을 비동기로 로드
@@ -26,7 +42,7 @@ class UnifiedAIService {
 
   /// 설정 불러오기
   Future<void> _loadSettings() async {
-    _settings = await _storage.loadSettings();
+    _settings = _resolveSettings(await _storage.loadSettings());
     _initializeServices();
   }
 
@@ -64,9 +80,10 @@ class UnifiedAIService {
 
   /// AI 모드 변경
   Future<bool> updateSettings(AISettings newSettings) async {
-    _settings = newSettings;
+    final resolved = _resolveSettings(newSettings);
+    _settings = resolved;
     _initializeServices();
-    return await _storage.saveSettings(newSettings);
+    return await _storage.saveSettings(resolved);
   }
 
   /// 사용자 메시지 처리
